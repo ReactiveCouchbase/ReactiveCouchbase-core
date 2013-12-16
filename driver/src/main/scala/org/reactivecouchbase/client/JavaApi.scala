@@ -14,33 +14,33 @@ trait JavaApi { self: Queries =>
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   def javaReplace(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.replace(key, exp, value, persistTo, replicateTo), ec )
+    waitForOperationStatus( bucket.couchbaseClient.replace(key, exp, value, persistTo, replicateTo), bucket, ec )
   }
 
   def javaAdd(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.add(key, exp, value, persistTo, replicateTo), ec )
+    waitForOperationStatus( bucket.couchbaseClient.add(key, exp, value, persistTo, replicateTo), bucket, ec )
   }
 
   def javaSet(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.set(key, exp, value, persistTo, replicateTo), ec )
+    waitForOperationStatus( bucket.couchbaseClient.set(key, exp, value, persistTo, replicateTo), bucket, ec )
   }
 
   def javaGet(key: String, bucket: CouchbaseBucket, ec: ExecutionContext): Future[String] = {
-    waitForGet( bucket.couchbaseClient.asyncGet(key), ec ).flatMap {
+    waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case s: String => Future.successful(s)
       case _ => Future.failed(new NullPointerException)
     }(ec)
   }
 
   def javaGet[T](key: String, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
-    waitForGet( bucket.couchbaseClient.asyncGet(key), ec ).flatMap {
+    waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case value: String => Future.successful(play.libs.Json.fromJson(play.libs.Json.parse(value), clazz))
       case _ => Future.failed(new NullPointerException)
     }(ec)
   }
 
   def javaView(docName: String, viewName: String, bucket: CouchbaseBucket, ec: ExecutionContext): Future[View] = {
-    waitForHttp[View]( bucket.couchbaseClient.asyncGetView(docName, viewName), ec )
+    waitForHttp[View]( bucket.couchbaseClient.asyncGetView(docName, viewName), bucket, ec )
   }
 
   def asJavaLong(f: Future[Long], ec: ExecutionContext): Future[java.lang.Long] = {

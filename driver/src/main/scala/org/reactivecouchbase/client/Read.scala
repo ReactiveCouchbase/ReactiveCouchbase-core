@@ -11,11 +11,11 @@ import collection.JavaConversions._
 trait Read {
 
   def keyStats(key: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Map[String, String]] = {
-    waitForOperation( bucket.couchbaseClient.getKeyStats(key), ec ).map(_.toMap)
+    waitForOperation( bucket.couchbaseClient.getKeyStats(key), bucket, ec ).map(_.toMap)
   }
 
   def get[T](key: String, tc: Transcoder[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Option[T]] = {
-    waitForGet[T]( bucket.couchbaseClient.asyncGet(key, tc), ec ) map {
+    waitForGet[T]( bucket.couchbaseClient.asyncGet(key, tc), bucket, ec ) map {
       case value: T => Some[T](value)
       case _ => None
     }
@@ -23,7 +23,7 @@ trait Read {
 
   def rawFetch(keysEnumerator: Enumerator[String])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[(String, String)] = {
     QueryEnumerator(keysEnumerator.apply(Iteratee.getChunks[String]).flatMap(_.run).flatMap { keys =>
-      waitForBulkRaw( bucket.couchbaseClient.asyncGetBulk(keys), ec ).map { results =>
+      waitForBulkRaw( bucket.couchbaseClient.asyncGetBulk(keys), bucket, ec ).map { results =>
         Enumerator.enumerate(results.toList)
       }.map { enumerator =>
         enumerator &> Enumeratee.collect[(String, AnyRef)] { case (k: String, v: String) => (k, v) }
@@ -35,7 +35,7 @@ trait Read {
     QueryEnumerator(rawFetch(keysEnumerator)(bucket, ec).enumerate.map { enumerator =>
       enumerator &> Enumeratee.map[(String, String)]( t => (t._1, r.reads(Json.parse(t._2))) ) &> Enumeratee.collect[(String, JsResult[T])] {
         case (k: String, JsSuccess(value, _)) => (k, value)
-        case (k: String, JsError(errors)) if Constants.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
+        case (k: String, JsError(errors)) if bucket.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
       }
     })
   }

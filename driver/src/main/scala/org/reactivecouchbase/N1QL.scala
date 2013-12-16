@@ -65,9 +65,9 @@ object CouchbaseN1QL {
 
   private[reactivecouchbase] val client: AsyncHttpClient = new AsyncHttpClient(config)
 
-  def N1QL(query: String): N1QLQuery = {
-    val host = Configuration.getString("couchbase.n1ql.host").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
-    val port = Configuration.getString("couchbase.n1ql.port").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
+  def N1QL(query: String, driver: CouchbaseDriver): N1QLQuery = {
+    val host = driver.configuration.getString("couchbase.n1ql.host").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
+    val port = driver.configuration.getString("couchbase.n1ql.port").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
     new N1QLQuery(query, host, port)
   }
 }

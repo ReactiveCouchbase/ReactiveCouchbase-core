@@ -60,7 +60,7 @@ trait Queries {
   }
 
   def rawSearch(view: View)(query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
-    QueryEnumerator(waitForHttp[ViewResponse]( bucket.couchbaseClient.asyncQuery(view, query), ec ).map { results =>
+    QueryEnumerator(waitForHttp[ViewResponse]( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
       Enumerator.enumerate(results.iterator()) &> Enumeratee.map[ViewRow] {
         case r: ViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
         case r: ViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
@@ -92,7 +92,7 @@ trait Queries {
         } &>
         Enumeratee.collect[JsRow[T]] {
           case JsRow(JsSuccess(doc, _), id, key, value) => TypedRow[T](doc, id, key, value)
-          case JsRow(JsError(errors), _, _, _) if Constants.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
+          case JsRow(JsError(errors), _, _, _) if bucket.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
         }
     })
   }
@@ -122,7 +122,7 @@ trait Queries {
     }
     Enumerator.repeatM({
       val actualQuery = query()
-      Timeout.timeout(Some, every, unit).flatMap(_ => Couchbase.find[T](doc, view)(actualQuery)(bucket, r, ec))
+      Timeout.timeout(Some, every, unit, bucket.cbDriver.scheduler()).flatMap(_ => Couchbase.find[T](doc, view)(actualQuery)(bucket, r, ec))
     }).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( _ => true ) ).through(Enumeratee.map { elem =>
       last = extractor(elem) + 1L
       elem
@@ -137,7 +137,7 @@ trait Queries {
 
   def pollQuery[T](doc: String, view: String, query: Query, everyMillis: Long, filter: T => Boolean)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Enumerator.repeatM(
-      Timeout.timeout(Some, everyMillis, TimeUnit.MILLISECONDS).flatMap(_ => find[T](doc, view)(query)(bucket, r, ec))
+      Timeout.timeout(Some, everyMillis, TimeUnit.MILLISECONDS, bucket.cbDriver.scheduler()).flatMap(_ => find[T](doc, view)(query)(bucket, r, ec))
     ).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( filter ) )
   }
 
@@ -162,30 +162,30 @@ trait Queries {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   def view(docName: String, viewName: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[View] = {
-    waitForHttp[View]( bucket.couchbaseClient.asyncGetView(docName, viewName), ec )
+    waitForHttp[View]( bucket.couchbaseClient.asyncGetView(docName, viewName), bucket, ec )
   }
 
   def spatialView(docName: String, viewName: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[SpatialView] = {
-    waitForHttp[SpatialView]( bucket.couchbaseClient.asyncGetSpatialView(docName, viewName), ec )
+    waitForHttp[SpatialView]( bucket.couchbaseClient.asyncGetSpatialView(docName, viewName), bucket, ec )
   }
 
   def designDocument(docName: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[DesignDocument] = {
-    waitForHttp[DesignDocument]( bucket.couchbaseClient.asyncGetDesignDocument(docName), ec )
+    waitForHttp[DesignDocument]( bucket.couchbaseClient.asyncGetDesignDocument(docName), bucket, ec )
   }
 
   def createDesignDoc(name: String, value: JsObject)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, Json.stringify(value)), ec )
+    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, Json.stringify(value)), bucket, ec )
   }
 
   def createDesignDoc(name: String, value: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, value), ec )
+    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, value), bucket, ec )
   }
 
   def createDesignDoc(value: DesignDocument)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(value), ec )
+    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(value), bucket, ec )
   }
 
   def deleteDesignDoc(name: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncDeleteDesignDoc(name), ec )
+    waitForHttpStatus( bucket.couchbaseClient.asyncDeleteDesignDoc(name), bucket, ec )
   }
 }

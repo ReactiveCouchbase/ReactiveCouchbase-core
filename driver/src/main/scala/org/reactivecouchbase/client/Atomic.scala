@@ -1,6 +1,6 @@
 package org.reactivecouchbase.client
 
-import org.reactivecouchbase.{Akka, Logger, CouchbaseBucket}
+import org.reactivecouchbase.{Logger, CouchbaseBucket}
 import scala.concurrent.{ Future, ExecutionContext }
 import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
@@ -64,7 +64,7 @@ class AtomicActor[T] extends Actor {
                 // something REALLY weird append during the locking time. But anyway, we can retry :-)
                 Logger.info("Couchbase lock WEIRD error : desync of CAS value. Retry anyway")
                 val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1)
-                val atomic_actor = Akka.system().actorOf(AtomicActor.props[T])
+                val atomic_actor = bb.cbDriver.system().actorOf(AtomicActor.props[T])
                 for (
                   tr <- (atomic_actor ? ar2)
                 ) yield (sen ! tr)
@@ -78,7 +78,7 @@ class AtomicActor[T] extends Actor {
             // build a new atomic request
             val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1)
             // get my actor
-            val atomic_actor = Akka.system().actorOf(AtomicActor.props[T])
+            val atomic_actor = bb.cbDriver.system().actorOf(AtomicActor.props[T])
             // wait and retry by asking actor with new atomic request
             for (
               d <- after(200 millis, using =
@@ -102,7 +102,7 @@ class AtomicActor[T] extends Actor {
 trait Atomic {
 
   def getAndLock[T](key: String, exp: CouchbaseExpirationTiming)(implicit r: Reads[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[Option[CASValue[T]]] = {
-    waitForGetAndCas[T](bucket.couchbaseClient.asyncGetAndLock(key, exp), ec, r) map {
+    waitForGetAndCas[T](bucket.couchbaseClient.asyncGetAndLock(key, exp), bucket, ec, r) map {
       case value: CASValue[T] =>
         Some[CASValue[T]](value)
       case _ => None
@@ -110,13 +110,13 @@ trait Atomic {
   }
 
   def unlock(key: String, casId: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus(bucket.couchbaseClient.asyncUnlock(key, casId), ec)
+    waitForOperationStatus(bucket.couchbaseClient.asyncUnlock(key, casId), bucket, ec)
   }
 
   def atomicUpdate[T](key: String, operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[Any] = {
     implicit val timeout = Timeout(8 minutes)
     val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1)
-    val atomic_actor = Akka.system().actorOf(AtomicActor.props[T])
+    val atomic_actor = bucket.cbDriver.system().actorOf(AtomicActor.props[T])
     (atomic_actor.ask(ar))
   }
 

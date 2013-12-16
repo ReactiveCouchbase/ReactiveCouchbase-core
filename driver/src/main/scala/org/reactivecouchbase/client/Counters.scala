@@ -11,19 +11,19 @@ import org.reactivecouchbase.client.CouchbaseFutures._
 trait Counters {
 
   def incr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), ec )
+    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec )
   }
 
   def incr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), ec )
+    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec )
   }
 
   def decr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), ec )
+    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec )
   }
 
   def decr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), ec )
+    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec )
   }
 
   def incrAndGet(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Int] = {

@@ -1,4 +1,4 @@
-import org.reactivecouchbase.Couchbase
+import org.reactivecouchbase.{CouchbaseDriver, Couchbase}
 import org.specs2.mutable._
 import play.api.libs.json.Json
 import scala.concurrent._
@@ -17,36 +17,36 @@ class CrudSpec extends Specification with Tags {
 
   import Utils._
 
+  val driver = CouchbaseDriver()
+
   "ReactiveCouchbase" should {
 
     "not be able to find some data" in {
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val bucket = driver.bucket("default")
       val fut = bucket.get[Person]("person-key1").map { opt =>
         if (!opt.isEmpty) {
           failure("Found John Doe")
         }
       }
       Await.result(fut, timeout)
-      bucket.disconnect()
       success
     }
 
     "insert some data" in {
       val expectedPerson = Person("John", "Doe", 42)
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val bucket = driver.bucket("default")
       val fut = bucket.set[Person]("person-key1", expectedPerson).map { status =>
         if (!status.isSuccess) {
           failure("Cannot persist John Doe")
         }
       }
       Await.result(fut, timeout)
-      bucket.disconnect()
       success
     }
 
     "fetch some data" in {
       val expectedPerson = Person("John", "Doe", 42)
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val bucket = driver.bucket("default")
       val fut = bucket.get[Person]("person-key1").map { opt =>
         if (opt.isEmpty) {
           failure("Cannot fetch John Doe")
@@ -55,26 +55,24 @@ class CrudSpec extends Specification with Tags {
         person.mustEqual(expectedPerson)
       }
       Await.result(fut, timeout)
-      bucket.disconnect()
       success
     }
 
     "update some data" in {
       val expectedPerson = Person("Jane", "Doe", 42)
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val bucket = driver.bucket("default")
       val fut = bucket.replace[Person]("person-key1", expectedPerson).map { status =>
         if (!status.isSuccess) {
           failure("Cannot persist Jane Doe")
         }
       }
       Await.result(fut, timeout)
-      bucket.disconnect()
       success
     }
 
     "fetch some data (again)" in {
       val expectedPerson = Person("Jane", "Doe", 42)
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val bucket = driver.bucket("default")
       val fut = bucket.get[Person]("person-key1").map { opt =>
         if (opt.isEmpty) {
           failure("Cannot fetch Jane Doe")
@@ -83,31 +81,33 @@ class CrudSpec extends Specification with Tags {
         person.mustEqual(expectedPerson)
       }
       Await.result(fut, timeout)
-      bucket.disconnect()
       success
     }
 
     "delete some data" in {
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val bucket = driver.bucket("default")
       val fut = bucket.delete("person-key1").map { status =>
         if (!status.isSuccess) {
           failure("Cannot delete John Doe")
         }
       }
       Await.result(fut, timeout)
-      bucket.disconnect()
       success
     }
 
     "not be able to find some data (again)" in {
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val bucket = driver.bucket("default")
       val fut = bucket.get[Person]("person-key1").map { opt =>
         if (!opt.isEmpty) {
           failure("Found John Doe")
         }
       }
       Await.result(fut, timeout)
-      bucket.disconnect()
+      success
+    }
+
+    "shutdown now" in {
+      driver.shutdown()
       success
     }
   }

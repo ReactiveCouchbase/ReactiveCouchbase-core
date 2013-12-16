@@ -13,15 +13,15 @@ import play.api.libs.iteratee.{Iteratee, Enumerator}
 trait Delete {
 
   def delete(key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.delete(key, persistTo, replicateTo), ec )
+    waitForOperationStatus( bucket.couchbaseClient.delete(key, persistTo, replicateTo), bucket, ec )
   }
 
   def deleteWithId[T <: {def id:String}](value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.delete(value.id, persistTo, replicateTo), ec )
+    waitForOperationStatus( bucket.couchbaseClient.delete(value.id, persistTo, replicateTo), bucket, ec )
   }
 
   def deleteWithKey[T](key: T => String, value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.delete(key(value), persistTo, replicateTo), ec )
+    waitForOperationStatus( bucket.couchbaseClient.delete(key(value), persistTo, replicateTo), bucket, ec )
   }
 
   def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[List[OperationStatus]] = {

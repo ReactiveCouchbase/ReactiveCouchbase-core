@@ -42,7 +42,7 @@ object CappedBucket {
     if (!reaperOn.containsKey(bucket.bucket)) {
       reaperOn.putIfAbsent(bucket.bucket, true)
       Logger.info(s"Capped reaper is on for ${bucket.bucket} ...")
-      Akka.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
+      bucket.cbDriver.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
         val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
         bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
           f.map { elem =>

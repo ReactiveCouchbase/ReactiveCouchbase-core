@@ -4,7 +4,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{Promise, Future, ExecutionContext}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
-import akka.actor.ActorSystem
+import akka.actor.{Scheduler, ActorSystem}
 import com.typesafe.config._
 import scala.util.control.NonFatal
 import scala.Some
@@ -65,13 +65,11 @@ trait LoggerLike {
 }
 
 object Logger extends LoggerLike {
-
+  // TODO : pluggable logger
   val logger = LoggerFactory.getLogger("ReactiveCouchbase")
 }
 
-object Configuration {
-
-  val underlying: Config = ConfigFactory.load()
+class Configuration(underlying: Config) {
 
   private def readValue[T](path: String, v: => T): Option[T] = {
     try {
@@ -118,21 +116,13 @@ object Configuration {
   }
 }
 
-object Akka {
-  private val actSystem = ActorSystem("ReactiveCouchbaseSystem")
-  def system() = actSystem
-  def executor() = actSystem.dispatcher
-  def scheduler() = actSystem.scheduler
-}
-
 object Timeout {
-  def timeout[A](message: => A, duration: scala.concurrent.duration.Duration)(implicit ec: ExecutionContext): Future[A] = {
-    timeout(message, duration.toMillis)
+  def timeout[A](message: => A, duration: scala.concurrent.duration.Duration, scheduler: Scheduler)(implicit ec: ExecutionContext): Future[A] = {
+    timeout(message, duration.toMillis, TimeUnit.MILLISECONDS, scheduler)
   }
-
-  def timeout[A](message: => A, duration: Long, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit ec: ExecutionContext): Future[A] = {
+  def timeout[A](message: => A, duration: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, scheduler: Scheduler)(implicit ec: ExecutionContext): Future[A] = {
     val p = Promise[A]()
-    Akka.scheduler().scheduleOnce(FiniteDuration(duration, unit)) {
+    scheduler.scheduleOnce(FiniteDuration(duration, unit)) {
       p.success(message)
     }
     p.future
