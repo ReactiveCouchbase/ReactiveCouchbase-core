@@ -67,6 +67,14 @@ class CouchbaseDriver(as: ActorSystem, config: Configuration, logger: LoggerLike
 
   def configuration = config
 
+  def bucket(hosts: List[String], port: String, base: String, bucket: String, user: String, pass: String, timeout: Long) = {
+    if (!buckets.containsKey(bucket)) {
+      val cb = new CouchbaseBucket(config, this, None, hosts, port, base, bucket, user, pass, timeout, executor()).connect()
+      buckets.putIfAbsent(bucket, cb)
+    }
+    buckets.get(bucket)
+  }
+
   def bucket(name: String): CouchbaseBucket = {
     if (!buckets.containsKey(name)) {
       val cfg = new Configuration(bucketsConfig.get(name).getOrElse(throw new RuntimeException(s"Cannot find bucket $name")))
