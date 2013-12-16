@@ -18,9 +18,22 @@ class CrudSpec extends Specification with Tags {
   import Utils._
 
   "ReactiveCouchbase" should {
+
+    "not be able to find some data" in {
+      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val fut = bucket.get[Person]("person-key1").map { opt =>
+        if (!opt.isEmpty) {
+          failure("Found John Doe")
+        }
+      }
+      Await.result(fut, timeout)
+      bucket.disconnect()
+      success
+    }
+
     "insert some data" in {
       val expectedPerson = Person("John", "Doe", 42)
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0).connect()
+      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
       val fut = bucket.set[Person]("person-key1", expectedPerson).map { status =>
         if (!status.isSuccess) {
           failure("Cannot persist John Doe")
@@ -33,7 +46,7 @@ class CrudSpec extends Specification with Tags {
 
     "fetch some data" in {
       val expectedPerson = Person("John", "Doe", 42)
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0).connect()
+      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
       val fut = bucket.get[Person]("person-key1").map { opt =>
         if (opt.isEmpty) {
           failure("Cannot fetch John Doe")
@@ -47,7 +60,7 @@ class CrudSpec extends Specification with Tags {
     }
 
     "delete some data" in {
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0).connect()
+      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
       val fut = bucket.delete("person-key1").map { status =>
         if (!status.isSuccess) {
           failure("Cannot delete John Doe")
@@ -58,11 +71,11 @@ class CrudSpec extends Specification with Tags {
       success
     }
 
-    "not be able to find some data" in {
-      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0).connect()
+    "not be able to find some data (again)" in {
+      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
       val fut = bucket.get[Person]("person-key1").map { opt =>
         if (!opt.isEmpty) {
-          failure("Foundohn Doe")
+          failure("Found John Doe")
         }
       }
       Await.result(fut, timeout)

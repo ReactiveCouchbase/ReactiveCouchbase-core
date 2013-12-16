@@ -11,27 +11,29 @@ import akka.actor.ActorSystem
 import java.util.Collections
 import org.reactivecouchbase.client._
 
-class CouchbaseBucket(val client: Option[CouchbaseClient], val hosts: List[String], val port: String, val base: String, val bucket: String, val user: String, val pass: String, val timeout: Long) extends BucketAPI {
+class CouchbaseBucket(val client: Option[CouchbaseClient], val hosts: List[String], val port: String, val base: String, val bucket: String, val user: String, val pass: String, val timeout: Long, ec: ExecutionContext) extends BucketAPI {
 
   def connect() = {
     val uris = ArrayBuffer(hosts.map { h => URI.create(s"http://$h:$port/$base") }: _*)
     val cfb = new CouchbaseConnectionFactoryBuilder()
     if (Configuration.getBoolean("couchbase.driver.useec").getOrElse(true)) {
-      cfb.setListenerExecutorService(ExecutionContextExecutorServiceBridge.apply(Akka.executor()))
+      cfb.setListenerExecutorService(ExecutionContextExecutorServiceBridge.apply(ec))
     }
     val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass);
     val client = new CouchbaseClient(cf);
-    new CouchbaseBucket(Some(client), hosts, port, base, bucket, user, pass, timeout)
+    new CouchbaseBucket(Some(client), hosts, port, base, bucket, user, pass, timeout, ec)
   }
 
   def disconnect() = {
     client.map(_.shutdown(timeout, TimeUnit.SECONDS))
-    new CouchbaseBucket(None, hosts, port, base, bucket, user, pass, timeout)
+    new CouchbaseBucket(None, hosts, port, base, bucket, user, pass, timeout, ec)
   }
 
   def couchbaseClient: CouchbaseClient = {
     client.getOrElse(throw new ReactiveCouchbaseException(s"Error with bucket ${bucket}", s"Bucket '${bucket}' is not defined or client is not connected"))
   }
+
+  def executionContext = ec
 }
 
 object Couchbase extends Read with Write with Delete with Counters with Queries with JavaApi with Atomic {
@@ -43,8 +45,9 @@ object Couchbase extends Read with Write with Delete with Counters with Queries 
     bucket: String = Configuration.getString("couchbase.bucket.bucket").getOrElse("default"),
     user: String = Configuration.getString("couchbase.bucket.user").getOrElse(""),
     pass: String = Configuration.getString("couchbase.bucket.pass").getOrElse(""),
-    timeout: Long = Configuration.getLong("couchbase.bucket.timeout").getOrElse(0)): CouchbaseBucket = {
-    new CouchbaseBucket(None, hosts, port, base, bucket, user, pass, timeout)
+    timeout: Long = Configuration.getLong("couchbase.bucket.timeout").getOrElse(0),
+    ec: ExecutionContext): CouchbaseBucket = {
+    new CouchbaseBucket(None, hosts, port, base, bucket, user, pass, timeout, ec)
   }
 }
 

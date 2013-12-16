@@ -119,8 +119,10 @@ object Configuration {
 }
 
 object Akka {
-  val system = ActorSystem("ReactiveCouchbaseSystem")
-  def executor() = system.dispatcher
+  private val actSystem = ActorSystem("ReactiveCouchbaseSystem")
+  def system() = actSystem
+  def executor() = actSystem.dispatcher
+  def scheduler() = actSystem.scheduler
 }
 
 object Timeout {
@@ -130,7 +132,7 @@ object Timeout {
 
   def timeout[A](message: => A, duration: Long, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit ec: ExecutionContext): Future[A] = {
     val p = Promise[A]()
-    Akka.system.scheduler.scheduleOnce(FiniteDuration(duration, unit)) {
+    Akka.scheduler().scheduleOnce(FiniteDuration(duration, unit)) {
       p.success(message)
     }
     p.future

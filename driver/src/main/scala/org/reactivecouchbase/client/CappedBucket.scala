@@ -42,7 +42,7 @@ object CappedBucket {
     if (!reaperOn.containsKey(bucket.bucket)) {
       reaperOn.putIfAbsent(bucket.bucket, true)
       Logger.info(s"Capped reaper is on for ${bucket.bucket} ...")
-      Akka.system.scheduler.schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
+      Akka.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
         val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
         bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
           f.map { elem =>
@@ -63,8 +63,8 @@ object CappedBucket {
 
 class CappedBucket(bucket: CouchbaseBucket, max: Int, reaper: Boolean = true) {
 
-  if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, Akka.executor())
-  if (reaper) CappedBucket.enabledReaper(bucket, max, Akka.executor())
+  if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, bucket.executionContext)
+  if (reaper) CappedBucket.enabledReaper(bucket, max, bucket.executionContext)
 
   def oldestOption[T](key: String)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(false).setLimit(1)

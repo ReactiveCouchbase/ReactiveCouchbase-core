@@ -1,18 +1,13 @@
-package org.reactivecouchbase.plugins
+package org.reactivecouchbase
 
-/*
-class CouchbaseN1QLPlugin(app: Application) extends Plugin {
+import scala.concurrent._
+import play.api.libs.iteratee._
+import play.api.libs.json._
+import com.ning.http.client.{Response, AsyncCompletionHandler, AsyncHttpClient, AsyncHttpClientConfig}
+import org.reactivecouchbase.client.ReactiveCouchbaseException
 
-  var queryBase: Option[WSRequestHolder] = None
-
-  override def onStart {
-    val host = Configuration.getString("couchbase.n1ql.host").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
-    val port = Configuration.getString("couchbase.n1ql.port").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
-    queryBase = Some(WS.url(s"http://${host}:${port}/query"))
-  }
-}
-
-class N1QLQuery(query: String, base: WSRequestHolder) {
+class N1QLQuery(query: String, host: String, port: String) {
+  val url = s"http://${host}:${port}/query"
   def enumerateJson(implicit ec: ExecutionContext): Future[Enumerator[JsObject]] = {
     toJsArray(ec).map { arr =>
       Enumerator.enumerate(arr.value) &> Enumeratee.map[JsValue](_.as[JsObject])
@@ -34,8 +29,18 @@ class N1QLQuery(query: String, base: WSRequestHolder) {
   }
 
   def toJsArray(implicit ec: ExecutionContext): Future[JsArray] = {
-    base.post(Map("q" -> Seq(query))).map { response =>
-      (response.json \ "resultset").as[JsArray]
+    val result = Promise[JsValue]()
+    CouchbaseN1QL.client.preparePost(url).addQueryParameter("q", query).execute(new AsyncCompletionHandler[Response]() {
+      override def onCompleted(response: Response) = {
+        result.success(Json.parse(response.getResponseBody))
+        response
+      }
+      override def onThrowable(t: Throwable) = {
+        result.failure(t)
+      }
+    })
+    result.future.map { response =>
+      (response \ "resultset").as[JsArray]
     }
   }
 
@@ -48,5 +53,22 @@ class N1QLQuery(query: String, base: WSRequestHolder) {
   }
 }
 
-*/
+object CouchbaseN1QL {
+
+  private val config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
+    .setAllowPoolingConnection(true)
+    .setCompressionEnabled(true)
+    .setRequestTimeoutInMs(600000)
+    .setIdleConnectionInPoolTimeoutInMs(600000)
+    .setIdleConnectionTimeoutInMs(600000)
+    .build()
+
+  private[reactivecouchbase] val client: AsyncHttpClient = new AsyncHttpClient(config)
+
+  def N1QL(query: String): N1QLQuery = {
+    val host = Configuration.getString("couchbase.n1ql.host").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
+    val port = Configuration.getString("couchbase.n1ql.port").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
+    new N1QLQuery(query, host, port)
+  }
+}
 
