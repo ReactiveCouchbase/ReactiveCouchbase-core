@@ -6,8 +6,8 @@ class CouchbaseN1QLPlugin(app: Application) extends Plugin {
   var queryBase: Option[WSRequestHolder] = None
 
   override def onStart {
-    val host = Play.configuration.getString("couchbase.n1ql.host").getOrElse(throw new PlayException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
-    val port = Play.configuration.getString("couchbase.n1ql.port").getOrElse(throw new PlayException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
+    val host = Configuration.getString("couchbase.n1ql.host").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
+    val port = Configuration.getString("couchbase.n1ql.port").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
     queryBase = Some(WS.url(s"http://${host}:${port}/query"))
   }
 }

@@ -5,14 +5,13 @@ import net.spy.memcached.CASValue
 import scala.concurrent.{ Promise, Future, ExecutionContext }
 import com.couchbase.client.internal.{ HttpCompletionListener, HttpFuture }
 import net.spy.memcached.ops.OperationStatus
-import play.api.Logger
 import play.api.libs.json.Reads
-import scala.util.control.ControlThrowable
+import org.reactivecouchbase.{Configuration, Logger}
 
 object CouchbaseFutures {
 
-  val logger = Logger("CouchbasePlugin")
-  val checkFutures = play.api.Play.current.configuration.getBoolean("couchbase.driver.checkfuture").getOrElse(false)
+  val logger = Logger
+  val checkFutures = Configuration.getBoolean("couchbase.driver.checkfuture").getOrElse(false)
 
   def waitForBulkRaw(future: BulkFuture[java.util.Map[String, AnyRef]], ec: ExecutionContext): Future[java.util.Map[String, AnyRef]] = {
     val promise = Promise[java.util.Map[String, AnyRef]]()

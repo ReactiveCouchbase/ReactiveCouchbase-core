@@ -1,12 +1,13 @@
 package org.reactivecouchbase.client
 
-import org.reactivecouchbase.CouchbaseBucket
+import org.reactivecouchbase.{Akka, Logger, CouchbaseBucket}
 import scala.concurrent.{ Future, ExecutionContext }
 import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
 import net.spy.memcached.CASValue
 import play.api.libs.json._
 import akka.actor.Actor
+import akka.pattern._
 import akka.actor.Props
 import akka.util.Timeout
 import scala.concurrent.duration._

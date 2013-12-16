@@ -41,6 +41,8 @@ object ApplicationBuild extends Build {
       libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.2.1",
       libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.2.0",
       libraryDependencies += "com.typesafe.play" %% "play-json" % "2.2.0",
+      libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.13",
+      libraryDependencies += "com.typesafe" % "config" % "1.0.2",
       libraryDependencies += "org.specs2" %% "specs2" % "2.2.1" % "test",
       organization := "org.reactivecouchbase",
       version := appVersion,

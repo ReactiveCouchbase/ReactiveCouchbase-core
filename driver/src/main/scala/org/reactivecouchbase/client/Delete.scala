@@ -6,7 +6,6 @@ import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
 import net.spy.memcached.{PersistTo, ReplicateTo}
 import play.api.libs.iteratee.{Iteratee, Enumerator}
-import play.api.libs.json.Writes
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Delete Operations

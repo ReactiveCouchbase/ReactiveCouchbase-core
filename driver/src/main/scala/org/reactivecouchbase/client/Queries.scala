@@ -1,10 +1,10 @@
 package org.reactivecouchbase.client
 
 import play.api.libs.json._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Promise, ExecutionContext, Future}
 import play.api.libs.iteratee.{Enumeratee, Iteratee, Concurrent, Enumerator}
 import com.couchbase.client.protocol.views._
-import org.reactivecouchbase.{Couchbase, CouchbaseBucket}
+import org.reactivecouchbase.{Timeout, Couchbase, CouchbaseBucket}
 import java.util.concurrent.TimeUnit
 import org.reactivecouchbase.client.CouchbaseFutures._
 import net.spy.memcached.ops.OperationStatus
@@ -44,7 +44,7 @@ object QueryEnumerator {
 trait Queries {
 
   def docName(name: String) = {
-    if (play.api.Play.isDev(play.api.Play.current)) s"dev_$name" else name
+    name//if (play.api.Play.isDev(play.api.Play.current)) s"dev_$name" else name
   }
 
   def find[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext) = searchValues(docName, viewName)(query)(bucket, r, ec).toList(ec)
@@ -55,7 +55,7 @@ trait Queries {
   def rawSearch(docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
     QueryEnumerator(view(docName, viewName).flatMap {
       case view: View => rawSearch(view)(query)(bucket, ec).enumerate
-      case _ => Future.failed(new PlayException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
+      case _ => Future.failed(new ReactiveCouchbaseException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
     })
   }
 
@@ -76,7 +76,7 @@ trait Queries {
   def search[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = {
     QueryEnumerator(view(docName, viewName).flatMap {
       case view: View => search(view)(query)(bucket, r, ec).enumerate
-      case _ => Future.failed(new PlayException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
+      case _ => Future.failed(new ReactiveCouchbaseException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
     })
   }
 
@@ -100,7 +100,7 @@ trait Queries {
   def searchValues[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
     QueryEnumerator(view(docName, viewName).flatMap {
       case view: View => searchValues(view)(query)(bucket, r, ec).enumerate
-      case _ => Future.failed(new PlayException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
+      case _ => Future.failed(new ReactiveCouchbaseException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
     })
   }
 
@@ -122,7 +122,7 @@ trait Queries {
     }
     Enumerator.repeatM({
       val actualQuery = query()
-      play.api.libs.concurrent.Promise.timeout(Some, every, unit).flatMap(_ => Couchbase.find[T](doc, view)(actualQuery)(bucket, r, ec))
+      Timeout.timeout(Some, every, unit).flatMap(_ => Couchbase.find[T](doc, view)(actualQuery)(bucket, r, ec))
     }).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( _ => true ) ).through(Enumeratee.map { elem =>
       last = extractor(elem) + 1L
       elem
@@ -137,7 +137,7 @@ trait Queries {
 
   def pollQuery[T](doc: String, view: String, query: Query, everyMillis: Long, filter: T => Boolean)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Enumerator.repeatM(
-      play.api.libs.concurrent.Promise.timeout(Some, everyMillis, TimeUnit.MILLISECONDS).flatMap(_ => find[T](doc, view)(query)(bucket, r, ec))
+      Timeout.timeout(Some, everyMillis, TimeUnit.MILLISECONDS).flatMap(_ => find[T](doc, view)(query)(bucket, r, ec))
     ).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( filter ) )
   }
 

@@ -1,6 +1,6 @@
 package org.reactivecouchbase.client
 
-import org.reactivecouchbase.{CouchbaseRWImplicits, CouchbaseBucket, Couchbase}
+import org.reactivecouchbase._
 import com.couchbase.client.protocol.views.{Stale, Query}
 import play.api.libs.json._
 import scala.concurrent.{Promise, Future, ExecutionContext}
@@ -10,6 +10,8 @@ import net.spy.memcached.{ReplicateTo, PersistTo}
 import net.spy.memcached.ops.OperationStatus
 import scala.concurrent.duration.Duration
 import org.reactivecouchbase.CouchbaseExpiration._
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsObject
 
 
 object CappedBucket {
@@ -29,18 +31,18 @@ object CappedBucket {
       }
     """
 
-  def apply(name: String, max: Int, reaper: Boolean = true)(implicit app: Application) = {
-    if (!buckets.containsKey(name)) {
-      buckets.putIfAbsent(name, new CappedBucket(name, max, reaper)(app))
+  def apply(bucket: CouchbaseBucket, max: Int, reaper: Boolean = true) = {
+    if (!buckets.containsKey(bucket.bucket)) {
+      buckets.putIfAbsent(bucket.bucket, new CappedBucket(bucket, max, reaper))
     }
-    buckets.get(name)
+    buckets.get(bucket.bucket)
   }
 
-  private def enabledReaper(bucket: CouchbaseBucket, max: Int, app: Application, ec: ExecutionContext) = {
+  private def enabledReaper(bucket: CouchbaseBucket, max: Int, ec: ExecutionContext) = {
     if (!reaperOn.containsKey(bucket.bucket)) {
       reaperOn.putIfAbsent(bucket.bucket, true)
       Logger.info(s"Capped reaper is on for ${bucket.bucket} ...")
-      play.api.libs.concurrent.Akka.system(app).scheduler.schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
+      Akka.system.scheduler.schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
         val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
         bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
           f.map { elem =>
@@ -59,12 +61,10 @@ object CappedBucket {
   }
 }
 
-class CappedBucket(name: String, max: Int, reaper: Boolean = true)(implicit app: Application) {
+class CappedBucket(bucket: CouchbaseBucket, max: Int, reaper: Boolean = true) {
 
-  def bucket = Couchbase.bucket(name)
-
-  if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, Couchbase.couchbaseExecutor(app))
-  if (reaper) CappedBucket.enabledReaper(bucket, max, app, Couchbase.couchbaseExecutor(app))
+  if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, Akka.executor())
+  if (reaper) CappedBucket.enabledReaper(bucket, max, Akka.executor())
 
   def oldestOption[T](key: String)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(false).setLimit(1)
