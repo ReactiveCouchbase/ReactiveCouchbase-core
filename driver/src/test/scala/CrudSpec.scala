@@ -59,6 +59,34 @@ class CrudSpec extends Specification with Tags {
       success
     }
 
+    "update some data" in {
+      val expectedPerson = Person("Jane", "Doe", 42)
+      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val fut = bucket.replace[Person]("person-key1", expectedPerson).map { status =>
+        if (!status.isSuccess) {
+          failure("Cannot persist Jane Doe")
+        }
+      }
+      Await.result(fut, timeout)
+      bucket.disconnect()
+      success
+    }
+
+    "fetch some data (again)" in {
+      val expectedPerson = Person("Jane", "Doe", 42)
+      val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
+      val fut = bucket.get[Person]("person-key1").map { opt =>
+        if (opt.isEmpty) {
+          failure("Cannot fetch Jane Doe")
+        }
+        val person = opt.get
+        person.mustEqual(expectedPerson)
+      }
+      Await.result(fut, timeout)
+      bucket.disconnect()
+      success
+    }
+
     "delete some data" in {
       val bucket = Couchbase(List("127.0.0.1"), "8091", "pools", "default", "", "", 0, ec).connect()
       val fut = bucket.delete("person-key1").map { status =>
