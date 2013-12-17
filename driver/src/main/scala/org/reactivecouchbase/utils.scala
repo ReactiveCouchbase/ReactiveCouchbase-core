@@ -64,8 +64,7 @@ trait LoggerLike {
   }
 }
 
-object Logger extends LoggerLike {
-  // TODO : pluggable logger
+object StandaloneLogger extends LoggerLike {
   val logger = LoggerFactory.getLogger("ReactiveCouchbase")
 }
 

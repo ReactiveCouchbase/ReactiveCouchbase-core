@@ -6,11 +6,9 @@ import scala.concurrent.{ Promise, Future, ExecutionContext }
 import com.couchbase.client.internal.{ HttpCompletionListener, HttpFuture }
 import net.spy.memcached.ops.OperationStatus
 import play.api.libs.json.Reads
-import org.reactivecouchbase.{CouchbaseBucket, Configuration, Logger}
+import org.reactivecouchbase.CouchbaseBucket
 
 object CouchbaseFutures {
-
-  val logger = Logger
 
   def waitForBulkRaw(future: BulkFuture[java.util.Map[String, AnyRef]], b: CouchbaseBucket, ec : ExecutionContext): Future[java.util.Map[String, AnyRef]] = {
     val promise = Promise[java.util.Map[String, AnyRef]]()
@@ -19,13 +17,13 @@ object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.failure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) logger.error(f.getStatus.getMessage)
+          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled || f.isTimeout) {
             promise.success(f.get().asInstanceOf[java.util.Map[String, AnyRef]])
           } else {
             if (b.checkFutures) promise.failure(new Throwable(s"BulkFuture epic fail !!! ${f.isDone} : ${f.isCancelled} : ${f.isTimeout}"))
             else {
-              logger.info(s"BulkFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
+              b.driver.logger.info(s"BulkFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
               promise.success(f.get().asInstanceOf[java.util.Map[String, AnyRef]])
             }
           }
@@ -42,13 +40,13 @@ object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.failure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) logger.error(f.getStatus.getMessage)
+          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.success(f.get().asInstanceOf[T])
           } else {
             if (b.checkFutures) promise.failure(new Throwable(s"GetFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
-              logger.info(s"GetFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
+              b.driver.logger.info(s"GetFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
               promise.success(f.get().asInstanceOf[T])
             }
           }
@@ -67,7 +65,7 @@ object CouchbaseFutures {
     future.addListener(new OperationCompletionListener() {
       def onComplete(f: OperationFuture[_]) = {
         if (!f.getStatus.isSuccess) {
-          logger.error(f.getStatus.getMessage + " for key " + f.getKey)
+          b.driver.logger.error(f.getStatus.getMessage + " for key " + f.getKey)
           f.getStatus.getMessage match {
             case "NOT_FOUND" => promise.failure(new OperationStatusErrorNotFound(f.getStatus))
             case "LOCK_ERROR" => promise.failure(new OperationStatusErrorIsLocked(f.getStatus))
@@ -78,7 +76,7 @@ object CouchbaseFutures {
         } else {
           if (b.checkFutures) promise.failure(new Throwable(s"GetFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
           else {
-            logger.info(s"GetFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
+            b.driver.logger.info(s"GetFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
             promise.success(f.get().asInstanceOf[CASValue[T]])
           }
         }
@@ -95,13 +93,13 @@ object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.failure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) logger.error(f.getStatus.getMessage)
+          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.success(f.getStatus)
           } else {
             if (b.checkFutures) promise.failure(new Throwable(s"HttpFutureStatus epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
-              logger.info(s"HttpFutureStatus not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
+              b.driver.logger.info(s"HttpFutureStatus not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
               promise.success(f.getStatus)
             }
           }
@@ -118,13 +116,13 @@ object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.failure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) logger.error(f.getStatus.getMessage)
+          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.success(f.get().asInstanceOf[T])
           } else {
             if (b.checkFutures) promise.failure(new Throwable(s"HttpFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
-              logger.info(s"HttpFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
+              b.driver.logger.info(s"HttpFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
               promise.success(f.get().asInstanceOf[T])
             }
           }
@@ -141,13 +139,13 @@ object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.failure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) logger.error(f.getStatus.getMessage)
+          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.success(f.getStatus)
           } else {
             if (b.checkFutures) promise.failure(new Throwable(s"OperationFutureStatus epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
-              logger.info(s"OperationFutureStatus not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
+              b.driver.logger.info(s"OperationFutureStatus not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
               promise.success(f.getStatus)
             }
           }
@@ -164,13 +162,13 @@ object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.failure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) logger.error(f.getStatus.getMessage)
+          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.success(f.get().asInstanceOf[T])
           } else {
             if (b.checkFutures) promise.failure(new Throwable(s"OperationFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
-              logger.info(s"OperationFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
+              b.driver.logger.info(s"OperationFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
               promise.success(f.get().asInstanceOf[T])
             }
           }

@@ -41,8 +41,8 @@ object CappedBucket {
   private def enabledReaper(bucket: CouchbaseBucket, max: Int, ec: ExecutionContext) = {
     if (!reaperOn.containsKey(bucket.bucket)) {
       reaperOn.putIfAbsent(bucket.bucket, true)
-      Logger.info(s"Capped reaper is on for ${bucket.bucket} ...")
-      bucket.cbDriver.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
+      bucket.driver.logger.info(s"Capped reaper is on for ${bucket.bucket} ...")
+      bucket.driver.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
         val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
         bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
           f.map { elem =>

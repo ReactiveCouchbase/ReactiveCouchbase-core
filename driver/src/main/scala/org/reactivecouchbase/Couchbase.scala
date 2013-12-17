@@ -7,13 +7,13 @@ import collection.JavaConversions._
 import collection.mutable.ArrayBuffer
 import scala.Some
 import scala.concurrent.{ ExecutionContextExecutorService, ExecutionContext }
-import akka.actor.ActorSystem
+import akka.actor.{Scheduler, ActorSystem}
 import java.util.Collections
 import org.reactivecouchbase.client._
 import com.typesafe.config.{Config, ConfigFactory}
 import net.spy.memcached.{ReplicateTo, PersistTo}
 
-class CouchbaseBucket( val cbDriver: CouchbaseDriver,
+class CouchbaseBucket( val cbDriver: ReactiveCouchbaseDriver,
                        val client: Option[CouchbaseClient],
                        val hosts: List[String],
                        val port: String,
@@ -23,7 +23,7 @@ class CouchbaseBucket( val cbDriver: CouchbaseDriver,
                        val pass: String,
                        val timeout: Long) extends BucketAPI {
 
-  def connect() = {
+  def connect(): CouchbaseBucket = {
     val uris = ArrayBuffer(hosts.map { h => URI.create(s"http://$h:$port/$base") }: _*)
     val cfb = new CouchbaseConnectionFactoryBuilder()
     if (cbDriver.configuration.getBoolean("couchbase.driver.useec").getOrElse(true)) {
@@ -34,7 +34,7 @@ class CouchbaseBucket( val cbDriver: CouchbaseDriver,
     new CouchbaseBucket(cbDriver, Some(client), hosts, port, base, bucket, user, pass, timeout)
   }
 
-  def disconnect() = {
+  def disconnect(): CouchbaseBucket = {
     client.map(_.shutdown(timeout, TimeUnit.SECONDS))
     new CouchbaseBucket(cbDriver, None, hosts, port, base, bucket, user, pass, timeout)
   }
@@ -43,39 +43,39 @@ class CouchbaseBucket( val cbDriver: CouchbaseDriver,
     client.getOrElse(throw new ReactiveCouchbaseException(s"Error with bucket ${bucket}", s"Bucket '${bucket}' is not defined or client is not connected"))
   }
 
-  def driver = cbDriver
+  def driver: ReactiveCouchbaseDriver = cbDriver
 
   private[reactivecouchbase] val checkFutures = cbDriver.configuration.getBoolean("couchbase.driver.checkfuture").getOrElse(false)
   private[reactivecouchbase] val jsonStrictValidation = cbDriver.configuration.getBoolean("couchbase.json.validate").getOrElse(true)
   private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
   private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.execution-context.timeout").getOrElse(1000L)
   if (jsonStrictValidation) {
-    Logger.info("Failing on bad JSON structure enabled.")
+    driver.logger.info("Failing on bad JSON structure enabled.")
   }
   if (failWithOpStatus) {
-    Logger.info("Failing Futures on failed OperationStatus enabled.")
+    driver.logger.info("Failing Futures on failed OperationStatus enabled.")
   }
 }
 
-class CouchbaseDriver(as: ActorSystem, config: Configuration, logger: LoggerLike) {
+class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike) {
 
   val buckets = new ConcurrentHashMap[String, CouchbaseBucket]
 
-  val bucketsConfig = config.getObjectList("couchbase.buckets")
+  val bucketsConfig: Map[String, Config] = config.getObjectList("couchbase.buckets")
     .getOrElse(throw new RuntimeException("Can't find any bucket in conf !!!"))
     .map(_.toConfig)
     .map(b => (b.getString("bucket"), b))
     .toMap
 
-  def system() = as
-  def executor() = as.dispatcher
-  def scheduler() = as.scheduler
-  def configuration = config
+  def system(): ActorSystem = as
+  def executor(): ExecutionContext = as.dispatcher
+  def scheduler(): Scheduler = as.scheduler
+  def configuration: Configuration = config
+  def logger: LoggerLike = log
 
-  def bucket(hosts: List[String], port: String, base: String, bucket: String, user: String, pass: String, timeout: Long) = {
+  def bucket(hosts: List[String], port: String, base: String, bucket: String, user: String, pass: String, timeout: Long): CouchbaseBucket = {
     if (!buckets.containsKey(bucket)) {
-      val cb = new CouchbaseBucket(this, None, hosts, port, base, bucket, user, pass, timeout).connect()
-      buckets.putIfAbsent(bucket, cb)
+      buckets.putIfAbsent(bucket, new CouchbaseBucket(this, None, hosts, port, base, bucket, user, pass, timeout).connect())
     }
     buckets.get(bucket)
   }
@@ -99,12 +99,12 @@ class CouchbaseDriver(as: ActorSystem, config: Configuration, logger: LoggerLike
   def cappedBucket(name: String, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), bucket(name).driver.executor(), max, reaper)
   def cappedBucket(name: String, ec: ExecutionContext, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), ec, max, reaper)
 
-  def shutdown() = {
+  def shutdown() {
     buckets.foreach(t => t._2.disconnect())
   }
 }
 
-object CouchbaseDriver {
+object ReactiveCouchbaseDriver {
 
   private def defaultSystem = {
     import com.typesafe.config.ConfigFactory
@@ -112,9 +112,10 @@ object CouchbaseDriver {
     ActorSystem("ReactiveCouchbaseSystem", config.getConfig("couchbase.actorctx"))
   }
 
-  def apply() = new CouchbaseDriver(defaultSystem, new Configuration(ConfigFactory.load()), Logger)
-  def apply(system: ActorSystem) = new CouchbaseDriver(system, new Configuration(ConfigFactory.load()), Logger)
-  def apply(system: ActorSystem, config: Configuration) = new CouchbaseDriver(system, config, Logger)
+  def apply(): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(defaultSystem, new Configuration(ConfigFactory.load()), StandaloneLogger)
+  def apply(system: ActorSystem): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, new Configuration(ConfigFactory.load()), StandaloneLogger)
+  def apply(system: ActorSystem, config: Configuration): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, StandaloneLogger)
+  def apply(system: ActorSystem, config: Configuration, logger: LoggerLike): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, logger)
 }
 
 object Couchbase extends Read with Write with Delete with Counters with Queries with JavaApi with Atomic {}

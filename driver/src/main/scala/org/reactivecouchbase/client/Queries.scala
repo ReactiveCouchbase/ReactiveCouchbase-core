@@ -122,7 +122,7 @@ trait Queries {
     }
     Enumerator.repeatM({
       val actualQuery = query()
-      Timeout.timeout(Some, every, unit, bucket.cbDriver.scheduler()).flatMap(_ => Couchbase.find[T](doc, view)(actualQuery)(bucket, r, ec))
+      Timeout.timeout(Some, every, unit, bucket.driver.scheduler()).flatMap(_ => Couchbase.find[T](doc, view)(actualQuery)(bucket, r, ec))
     }).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( _ => true ) ).through(Enumeratee.map { elem =>
       last = extractor(elem) + 1L
       elem
@@ -137,7 +137,7 @@ trait Queries {
 
   def pollQuery[T](doc: String, view: String, query: Query, everyMillis: Long, filter: T => Boolean)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Enumerator.repeatM(
-      Timeout.timeout(Some, everyMillis, TimeUnit.MILLISECONDS, bucket.cbDriver.scheduler()).flatMap(_ => find[T](doc, view)(query)(bucket, r, ec))
+      Timeout.timeout(Some, everyMillis, TimeUnit.MILLISECONDS, bucket.driver.scheduler()).flatMap(_ => find[T](doc, view)(query)(bucket, r, ec))
     ).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( filter ) )
   }
 

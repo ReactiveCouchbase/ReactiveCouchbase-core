@@ -1,6 +1,6 @@
 package org.reactivecouchbase.client
 
-import org.reactivecouchbase.{Logger, CouchbaseBucket}
+import org.reactivecouchbase.{StandaloneLogger, CouchbaseBucket}
 import scala.concurrent.{ Future, ExecutionContext }
 import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
@@ -62,9 +62,9 @@ class AtomicActor[T] extends Actor {
               case CASResponse.NOT_FOUND => sen ! Future.failed(throw new AtomicNoKeyFoundError[T](ar))
               case CASResponse.EXISTS => {
                 // something REALLY weird append during the locking time. But anyway, we can retry :-)
-                Logger.info("Couchbase lock WEIRD error : desync of CAS value. Retry anyway")
+                bb.driver.logger.info("Couchbase lock WEIRD error : desync of CAS value. Retry anyway")
                 val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1)
-                val atomic_actor = bb.cbDriver.system().actorOf(AtomicActor.props[T])
+                val atomic_actor = bb.driver.system().actorOf(AtomicActor.props[T])
                 for (
                   tr <- (atomic_actor ? ar2)
                 ) yield (sen ! tr)
@@ -78,7 +78,7 @@ class AtomicActor[T] extends Actor {
             // build a new atomic request
             val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1)
             // get my actor
-            val atomic_actor = bb.cbDriver.system().actorOf(AtomicActor.props[T])
+            val atomic_actor = bb.driver.system().actorOf(AtomicActor.props[T])
             // wait and retry by asking actor with new atomic request
             for (
               d <- after(200 millis, using =
@@ -93,7 +93,8 @@ class AtomicActor[T] extends Actor {
       }
     }
     case _ => {
-      Logger.error("An atomic actor get a message, but not a atomic request, it's weird ! ")
+      // TODO : use current logger here
+      StandaloneLogger.error("An atomic actor get a message, but not a atomic request, it's weird ! ")
       sender ! Future.failed(throw new AtomicWeirdError())
     }
   }
@@ -116,7 +117,7 @@ trait Atomic {
   def atomicUpdate[T](key: String, operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[Any] = {
     implicit val timeout = Timeout(8 minutes)
     val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1)
-    val atomic_actor = bucket.cbDriver.system().actorOf(AtomicActor.props[T])
+    val atomic_actor = bucket.driver.system().actorOf(AtomicActor.props[T])
     (atomic_actor.ask(ar))
   }
 
