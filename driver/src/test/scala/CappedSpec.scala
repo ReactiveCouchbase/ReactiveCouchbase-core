@@ -55,9 +55,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "insert and read some stuff" in {
 
-      bucket.tail[Person]().map(_.apply(Iteratee.foreach { person =>
-        counter.incrementAndGet()
-      }).map(_.run))
+      bucket.tail[Person]().map(_(Iteratee.foreach { _ => counter.incrementAndGet() }))
       counter.get().mustEqual(0)
       bucket.insertStream(Enumerator.enumerate(personsAndKeys1))
       Await.result(after(Duration(2000, "millis"), using = b.driver.scheduler())(Future.successful(true)), Duration(2500, "millis"))
