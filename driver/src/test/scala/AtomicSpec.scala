@@ -32,7 +32,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
   val tk = "mylocktestkey_" // + UUID.randomUUID
 
-  "ReactiveCouchbase" should {
+  "ReactiveCouchbase atomic API" should {
 
     "delete locked key" in {
       val fut = bucket.delete(tk)
@@ -80,6 +80,12 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
         case Failure(r) => println("Success : unable to update a non existing key")
       })
       Await.result(after(Duration(6000, "millis"), using = bucket.driver.scheduler())(Future.successful(true)), Duration(7001, "millis"))
+    }
+
+    "delete locked key (again)" in {
+      val fut = bucket.delete(tk)
+      Await.result(fut, timeout)
+      success
     }
 
     "shutdown now" in {

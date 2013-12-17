@@ -42,7 +42,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     "person-4"
   )
 
-  "ReactiveCouchbase" should {
+  "ReactiveCouchbase streaming API" should {
 
     "insert streamed data" in {
       Await.result(bucket.setStream(Enumerator.enumerate(personsAndKeys)).map { results =>
