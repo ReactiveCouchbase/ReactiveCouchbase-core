@@ -19,6 +19,17 @@ class CrudSpec extends Specification with Tags {
 
   val driver = CouchbaseDriver()
 
+  println(
+    """
+
+==================================================================================================
+
+You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...
+
+==================================================================================================
+
+    """)
+
   "ReactiveCouchbase" should {
 
     "not be able to find some data" in {

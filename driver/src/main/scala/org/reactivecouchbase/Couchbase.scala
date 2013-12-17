@@ -13,36 +13,42 @@ import org.reactivecouchbase.client._
 import com.typesafe.config.{Config, ConfigFactory}
 import net.spy.memcached.{ReplicateTo, PersistTo}
 
-class CouchbaseBucket(val config: Configuration, val driver: CouchbaseDriver, val client: Option[CouchbaseClient], val hosts: List[String], val port: String, val base: String, val bucket: String, val user: String, val pass: String, val timeout: Long, ec: ExecutionContext) extends BucketAPI {
+class CouchbaseBucket( val cbDriver: CouchbaseDriver,
+                       val client: Option[CouchbaseClient],
+                       val hosts: List[String],
+                       val port: String,
+                       val base: String,
+                       val bucket: String,
+                       val user: String,
+                       val pass: String,
+                       val timeout: Long) extends BucketAPI {
 
   def connect() = {
     val uris = ArrayBuffer(hosts.map { h => URI.create(s"http://$h:$port/$base") }: _*)
     val cfb = new CouchbaseConnectionFactoryBuilder()
-    if (config.getBoolean("couchbase.driver.useec").getOrElse(true)) {
-      cfb.setListenerExecutorService(ExecutionContextExecutorServiceBridge.apply(ec))
+    if (cbDriver.configuration.getBoolean("couchbase.driver.useec").getOrElse(true)) {
+      cfb.setListenerExecutorService(ExecutionContextExecutorServiceBridge.apply(cbDriver.executor()))
     }
     val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass);
     val client = new CouchbaseClient(cf);
-    new CouchbaseBucket(config, driver, Some(client), hosts, port, base, bucket, user, pass, timeout, ec)
+    new CouchbaseBucket(cbDriver, Some(client), hosts, port, base, bucket, user, pass, timeout)
   }
 
   def disconnect() = {
     client.map(_.shutdown(timeout, TimeUnit.SECONDS))
-    new CouchbaseBucket(config, driver, None, hosts, port, base, bucket, user, pass, timeout, ec)
+    new CouchbaseBucket(cbDriver, None, hosts, port, base, bucket, user, pass, timeout)
   }
 
   def couchbaseClient: CouchbaseClient = {
     client.getOrElse(throw new ReactiveCouchbaseException(s"Error with bucket ${bucket}", s"Bucket '${bucket}' is not defined or client is not connected"))
   }
 
-  def executionContext = ec
+  def driver = cbDriver
 
-  def cbDriver = driver
-
-  val checkFutures = config.getBoolean("couchbase.driver.checkfuture").getOrElse(false)
-  val jsonStrictValidation = config.getBoolean("couchbase.json.validate").getOrElse(true)
-  val failWithOpStatus = config.getBoolean("couchbase.failfutures").getOrElse(false)
-  val ecTimeout: Long = config.getLong("couchbase.execution-context.timeout").getOrElse(1000L)
+  private[reactivecouchbase] val checkFutures = cbDriver.configuration.getBoolean("couchbase.driver.checkfuture").getOrElse(false)
+  private[reactivecouchbase] val jsonStrictValidation = cbDriver.configuration.getBoolean("couchbase.json.validate").getOrElse(true)
+  private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
+  private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.execution-context.timeout").getOrElse(1000L)
   if (jsonStrictValidation) {
     Logger.info("Failing on bad JSON structure enabled.")
   }
@@ -64,12 +70,11 @@ class CouchbaseDriver(as: ActorSystem, config: Configuration, logger: LoggerLike
   def system() = as
   def executor() = as.dispatcher
   def scheduler() = as.scheduler
-
   def configuration = config
 
   def bucket(hosts: List[String], port: String, base: String, bucket: String, user: String, pass: String, timeout: Long) = {
     if (!buckets.containsKey(bucket)) {
-      val cb = new CouchbaseBucket(config, this, None, hosts, port, base, bucket, user, pass, timeout, executor()).connect()
+      val cb = new CouchbaseBucket(this, None, hosts, port, base, bucket, user, pass, timeout).connect()
       buckets.putIfAbsent(bucket, cb)
     }
     buckets.get(bucket)
@@ -85,13 +90,14 @@ class CouchbaseDriver(as: ActorSystem, config: Configuration, logger: LoggerLike
       val user: String =        cfg.getString("user").getOrElse("")
       val pass: String =        cfg.getString("pass").getOrElse("")
       val timeout: Long =         cfg.getLong("timeout").getOrElse(0)
-      val cb = new CouchbaseBucket(config, this, None, hosts, port, base, bucket, user, pass, timeout, executor()).connect()
+      val cb = new CouchbaseBucket(this, None, hosts, port, base, bucket, user, pass, timeout).connect()
       buckets.putIfAbsent(name, cb)
     }
     buckets.get(name)
   }
 
-  def cappedBucket(name: String, max: Int, reaper: Boolean = true): CappedBucket = CappedBucket(bucket(name), max, reaper)
+  def cappedBucket(name: String, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), bucket(name).driver.executor(), max, reaper)
+  def cappedBucket(name: String, ec: ExecutionContext, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), ec, max, reaper)
 
   def shutdown() = {
     buckets.foreach(t => t._2.disconnect())

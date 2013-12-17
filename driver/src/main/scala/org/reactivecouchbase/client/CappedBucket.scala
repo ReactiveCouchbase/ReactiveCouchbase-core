@@ -31,9 +31,9 @@ object CappedBucket {
       }
     """
 
-  def apply(bucket: CouchbaseBucket, max: Int, reaper: Boolean = true) = {
+  def apply(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = true) = {
     if (!buckets.containsKey(bucket.bucket)) {
-      buckets.putIfAbsent(bucket.bucket, new CappedBucket(bucket, max, reaper))
+      buckets.putIfAbsent(bucket.bucket, new CappedBucket(bucket, ec, max, reaper))
     }
     buckets.get(bucket.bucket)
   }
@@ -61,10 +61,10 @@ object CappedBucket {
   }
 }
 
-class CappedBucket(bucket: CouchbaseBucket, max: Int, reaper: Boolean = true) {
+class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = true) {
 
-  if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, bucket.executionContext)
-  if (reaper) CappedBucket.enabledReaper(bucket, max, bucket.executionContext)
+  if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, ec)
+  if (reaper) CappedBucket.enabledReaper(bucket, max, ec)
 
   def oldestOption[T](key: String)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(false).setLimit(1)
