@@ -183,11 +183,11 @@ trait BucketAPI {
     Couchbase.delete(value.id, persistTo, replicateTo)(self, ec)
   }
 
-  def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.deleteStream(data, persistTo, replicateTo)(self, ec)
   }
 
-  def deleteStreamWithKey[T](key: T => String, data: Enumerator[T], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def deleteStreamWithKey[T](key: T => String, data: Enumerator[T], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.deleteStreamWithKey[T](key, data, persistTo, replicateTo)(self, ec)
   }
 

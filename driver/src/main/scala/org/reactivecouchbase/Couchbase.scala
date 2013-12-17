@@ -29,8 +29,14 @@ class CouchbaseBucket( val cbDriver: ReactiveCouchbaseDriver,
     if (cbDriver.configuration.getBoolean("couchbase.driver.useec").getOrElse(true)) {
       cfb.setListenerExecutorService(ExecutionContextExecutorServiceBridge.apply(cbDriver.executor()))
     }
-    val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass);
-    val client = new CouchbaseClient(cf);
+    val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass)
+    val client = new CouchbaseClient(cf)
+    if (jsonStrictValidation) {
+      driver.logger.info("Failing on bad JSON structure enabled.")
+    }
+    if (failWithOpStatus) {
+      driver.logger.info("Failing Futures on failed OperationStatus enabled.")
+    }
     new CouchbaseBucket(cbDriver, Some(client), hosts, port, base, bucket, user, pass, timeout)
   }
 
@@ -49,12 +55,6 @@ class CouchbaseBucket( val cbDriver: ReactiveCouchbaseDriver,
   private[reactivecouchbase] val jsonStrictValidation = cbDriver.configuration.getBoolean("couchbase.json.validate").getOrElse(true)
   private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
   private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.execution-context.timeout").getOrElse(1000L)
-  if (jsonStrictValidation) {
-    driver.logger.info("Failing on bad JSON structure enabled.")
-  }
-  if (failWithOpStatus) {
-    driver.logger.info("Failing Futures on failed OperationStatus enabled.")
-  }
 }
 
 class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike) {
