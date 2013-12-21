@@ -64,8 +64,12 @@ trait LoggerLike {
   }
 }
 
+class Logger(val logger: org.slf4j.Logger) extends LoggerLike
+
 object StandaloneLogger extends LoggerLike {
   val logger = LoggerFactory.getLogger("ReactiveCouchbase")
+  def apply(name: String): Logger = new Logger(LoggerFactory.getLogger(name))
+  def apply[T](clazz: Class[T]): Logger = new Logger(LoggerFactory.getLogger(clazz))
 }
 
 class Configuration(underlying: Config) {

@@ -3,7 +3,7 @@ import Keys._
 
 object ApplicationBuild extends Build {
 
-  val appName         = "ReactiveCouchbase"
+  val appName         = "ReactiveCouchbase-core"
   val appVersion      = "0.1-SNAPSHOT"
   val appScalaVersion = "2.10.2"
   val appScalaBinaryVersion = "2.10"
