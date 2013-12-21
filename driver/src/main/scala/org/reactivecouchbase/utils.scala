@@ -67,15 +67,15 @@ trait LoggerLike {
   def logger[T](clazz: Class[T]): LoggerLike
 }
 
-class Logger(val logger: org.slf4j.Logger) extends LoggerLike  {
-  def logger(name: String): LoggerLike = new Logger(LoggerFactory.getLogger(name))
-  def logger[T](clazz: Class[T]): LoggerLike = new Logger(LoggerFactory.getLogger(clazz))
+class RCLogger(val logger: org.slf4j.Logger) extends LoggerLike  {
+  def logger(name: String): LoggerLike = new RCLogger(LoggerFactory.getLogger(name))
+  def logger[T](clazz: Class[T]): LoggerLike = new RCLogger(LoggerFactory.getLogger(clazz))
 }
 
 object StandaloneLogger extends LoggerLike {
   val logger = LoggerFactory.getLogger("ReactiveCouchbase")
-  def logger(name: String): LoggerLike = new Logger(LoggerFactory.getLogger(name))
-  def logger[T](clazz: Class[T]): LoggerLike = new Logger(LoggerFactory.getLogger(clazz))
+  def logger(name: String): LoggerLike = new RCLogger(LoggerFactory.getLogger(name))
+  def logger[T](clazz: Class[T]): LoggerLike = new RCLogger(LoggerFactory.getLogger(clazz))
 }
 
 class Configuration(underlying: Config) {

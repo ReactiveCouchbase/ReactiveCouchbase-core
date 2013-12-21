@@ -5,16 +5,14 @@ import java.net.URI
 import java.util.concurrent.{ConcurrentHashMap, AbstractExecutorService, TimeUnit}
 import collection.JavaConversions._
 import collection.mutable.ArrayBuffer
-import scala.Some
 import scala.concurrent.{ ExecutionContextExecutorService, ExecutionContext }
 import akka.actor.{Scheduler, ActorSystem}
 import java.util.Collections
 import org.reactivecouchbase.client._
 import com.typesafe.config.{Config, ConfigFactory}
-import net.spy.memcached.{ReplicateTo, PersistTo}
 
-class CouchbaseBucket( val cbDriver: ReactiveCouchbaseDriver,
-                       val client: Option[CouchbaseClient],
+class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbaseDriver,
+                       private[reactivecouchbase] val client: Option[CouchbaseClient],
                        val hosts: List[String],
                        val port: String,
                        val base: String,
