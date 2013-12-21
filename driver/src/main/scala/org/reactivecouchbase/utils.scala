@@ -62,14 +62,20 @@ trait LoggerLike {
   def error(message: => String, error: => Throwable) {
     if (logger.isErrorEnabled) logger.error(message, error)
   }
+
+  def logger(name: String): LoggerLike
+  def logger[T](clazz: Class[T]): LoggerLike
 }
 
-class Logger(val logger: org.slf4j.Logger) extends LoggerLike
+class Logger(val logger: org.slf4j.Logger) extends LoggerLike  {
+  def logger(name: String): LoggerLike = new Logger(LoggerFactory.getLogger(name))
+  def logger[T](clazz: Class[T]): LoggerLike = new Logger(LoggerFactory.getLogger(clazz))
+}
 
 object StandaloneLogger extends LoggerLike {
   val logger = LoggerFactory.getLogger("ReactiveCouchbase")
-  def apply(name: String): Logger = new Logger(LoggerFactory.getLogger(name))
-  def apply[T](clazz: Class[T]): Logger = new Logger(LoggerFactory.getLogger(clazz))
+  def logger(name: String): LoggerLike = new Logger(LoggerFactory.getLogger(name))
+  def logger[T](clazz: Class[T]): LoggerLike = new Logger(LoggerFactory.getLogger(clazz))
 }
 
 class Configuration(underlying: Config) {
