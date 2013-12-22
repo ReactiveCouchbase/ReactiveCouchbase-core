@@ -1,3 +1,4 @@
+import java.util.concurrent.TimeUnit
 import org.reactivecouchbase.ReactiveCouchbaseDriver
 import org.specs2.mutable._
 import play.api.libs.json.Json
@@ -10,6 +11,112 @@ object Utils {
   implicit val personFmt = Json.format[Person]
   implicit val ec = ExecutionContext.Implicits.global
   val timeout = 10 seconds
+}
+
+class BulkSpec extends Specification with Tags {
+  sequential
+
+  import Utils._
+
+  """
+You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...
+  """ in ok
+
+  val driver = ReactiveCouchbaseDriver()
+  val bucket = driver.bucket("default")
+
+  "ReactiveCouchbase and its BulkAPI" should {
+
+    "not be able to find some data" in {
+      val fut = bucket.get[Person]("person-key1").map { opt =>
+        if (!opt.isEmpty) {
+          failure("Found John Doe")
+        }
+      }
+      Await.result(fut, timeout)
+      success
+    }
+
+    "insert some John DOE" in {
+      val expectedPerson = Person("John", "Doe", 42)
+      val fut = bucket.set[Person]("person-key1", expectedPerson).map { status =>
+        if (!status.isSuccess) {
+          failure("Cannot persist John Doe")
+        }
+      }
+      Await.result(fut, timeout)
+      success
+    }
+
+    "insert some Jane DOE" in {
+      val expectedPerson = Person("Jane", "Doe", 42)
+      val fut = bucket.set[Person]("person-key2", expectedPerson).map { status =>
+        if (!status.isSuccess) {
+          failure("Cannot persist Jane Doe")
+        }
+      }
+      Await.result(fut, timeout)
+      success
+    }
+
+    "insert some Billy DOE" in {
+      val expectedPerson = Person("Billy", "Doe", 42)
+      val fut = bucket.set[Person]("person-key3", expectedPerson).map { status =>
+        if (!status.isSuccess) {
+          failure("Cannot persist Billy Doe")
+        }
+      }
+      Await.result(fut, timeout)
+      success
+    }
+
+    "fetch some data" in {
+      val expectedPersons = List(
+        Person("John", "Doe", 42),
+        Person("Jane", "Doe", 42),
+        Person("Billy", "Doe", 42)
+      )
+      var seq = List[Future[Seq[Option[Person]]]]()
+      for (i <- 0 to 100) {
+        val fut: Future[List[Option[Person]]]  = Future.sequence(List(
+          bucket.get[Person]("person-key1"),
+          bucket.get[Person]("person-key2"),
+          bucket.get[Person]("person-key3")
+        )).map { list =>
+          //println("Got something : " + list)
+          if (list == null || list.isEmpty) failure("List should not be empty ...")
+          list.foreach { opt =>
+            if (opt.isEmpty) {
+              failure("Cannot fetch John Doe")
+            }
+            val person = opt.get
+            expectedPersons.contains(person).mustEqual(true)
+          }
+          list
+        }
+        seq = seq :+ fut
+      }
+      Await.result(Future(seq), Duration(120, TimeUnit.SECONDS))
+      //Await.result(fut, timeout)
+      success
+    }
+
+    "delete some data" in {
+      val fut = Future.sequence(Seq(
+        bucket.delete("person-key1"),
+        bucket.delete("person-key2"),
+        bucket.delete("person-key3")
+      ))
+      Await.result(fut, timeout)
+      success
+    }
+
+    "shutdown now" in {
+      //Await.result(bucket.flush(), timeout)
+      driver.shutdown()
+      success
+    }
+  }
 }
 
 class CrudSpec extends Specification with Tags {
