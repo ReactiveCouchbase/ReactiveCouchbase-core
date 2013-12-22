@@ -7,8 +7,6 @@ import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
 import com.couchbase.client.protocol.views._
 import scala.collection.JavaConversions._
-import java.lang.String
-import scala.Predef.String
 
 trait JavaApi { self: Queries =>
 

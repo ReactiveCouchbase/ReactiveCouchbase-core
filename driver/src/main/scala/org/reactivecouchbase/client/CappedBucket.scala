@@ -13,7 +13,6 @@ import org.reactivecouchbase.CouchbaseExpiration._
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
 
-
 object CappedBucket {
   private val buckets = new ConcurrentHashMap[String, CappedBucket]()
   private def docName = "play2couchbase-cappedbucket-designdoc"

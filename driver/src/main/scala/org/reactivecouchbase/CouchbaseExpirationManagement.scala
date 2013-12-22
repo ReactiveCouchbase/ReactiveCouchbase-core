@@ -1,8 +1,6 @@
 package org.reactivecouchbase
 
-
 import scala.concurrent.duration._
-
 
 /*
  * Handling the expiration problem

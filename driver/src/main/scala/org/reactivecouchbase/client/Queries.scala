@@ -1,7 +1,7 @@
 package org.reactivecouchbase.client
 
 import play.api.libs.json._
-import scala.concurrent.{Promise, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.iteratee.{Enumeratee, Iteratee, Concurrent, Enumerator}
 import com.couchbase.client.protocol.views._
 import org.reactivecouchbase.{Timeout, Couchbase, CouchbaseBucket}

@@ -1,6 +1,6 @@
 package org.reactivecouchbase.client
 
-import org.reactivecouchbase.{StandaloneLogger, CouchbaseBucket}
+import org.reactivecouchbase.{LoggerLike, StandaloneLogger, CouchbaseBucket}
 import scala.concurrent.{ Future, ExecutionContext }
 import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
@@ -24,6 +24,7 @@ case class AtomicError[T](request: AtomicRequest[T], message: String) extends Co
 case class AtomicTooMuchTryError[T](request: AtomicRequest[T]) extends ControlThrowable
 case class AtomicNoKeyFoundError[T](request: AtomicRequest[T]) extends ControlThrowable
 case class AtomicWeirdError() extends ControlThrowable
+case class LoggerHolder(logger: LoggerLike)
 
 object AtomicActor {
   def props[T]: Props = Props(classOf[AtomicActor[T]])
@@ -31,8 +32,10 @@ object AtomicActor {
 
 class AtomicActor[T] extends Actor {
 
-  def receive = {
+  var logger: Option[LoggerLike] = None
 
+  def receive = {
+    case lh: LoggerHolder => logger = Some(lh.logger)
     case ar: AtomicRequest[T] => {
       // I need some implicit, I know it's not good looking
       implicit val rr = ar.r
@@ -56,7 +59,7 @@ class AtomicActor[T] extends Actor {
             // write new object to couchbase and unlock :-)
             // TODO : use asyncCAS method, better io management
             val res = ar.bucket.couchbaseClient.cas(ar.key, cas.getCas, ar.w.writes(nv).toString)
-            // reply to sender it's OK
+              // reply to sender it's OK
             res match {
               case CASResponse.OK => sen ! Future.successful(AtomicSucess[T](ar.key))
               case CASResponse.NOT_FOUND => sen ! Future.failed(throw new AtomicNoKeyFoundError[T](ar))
@@ -93,8 +96,7 @@ class AtomicActor[T] extends Actor {
       }
     }
     case _ => {
-      // TODO : use current logger here
-      StandaloneLogger.error("An atomic actor get a message, but not a atomic request, it's weird ! ")
+      logger.map(_.error("An atomic actor get a message, but not a atomic request, it's weird ! "))
       sender ! Future.failed(throw new AtomicWeirdError())
     }
   }
@@ -118,6 +120,7 @@ trait Atomic {
     implicit val timeout = Timeout(8 minutes)
     val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1)
     val atomic_actor = bucket.driver.system().actorOf(AtomicActor.props[T])
+    atomic_actor ! LoggerHolder(bucket.driver.logger)
     (atomic_actor.ask(ar))
   }
 
