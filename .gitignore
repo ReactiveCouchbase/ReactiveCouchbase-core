@@ -22,3 +22,4 @@ dist
 .target
 bin/
 .settings
+/repository
