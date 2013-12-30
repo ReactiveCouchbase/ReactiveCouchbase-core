@@ -52,7 +52,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
   private[reactivecouchbase] val checkFutures = cbDriver.configuration.getBoolean("couchbase.driver.checkfuture").getOrElse(false)
   private[reactivecouchbase] val jsonStrictValidation = cbDriver.configuration.getBoolean("couchbase.json.validate").getOrElse(true)
   private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
-  private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.execution-context.timeout").getOrElse(1000L)
+  private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.actorctx.timeout").getOrElse(1000L)
 }
 
 class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike) {
