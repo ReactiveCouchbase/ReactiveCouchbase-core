@@ -97,6 +97,10 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
   def cappedBucket(name: String, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), bucket(name).driver.executor(), max, reaper)
   def cappedBucket(name: String, ec: ExecutionContext, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), ec, max, reaper)
 
+  def N1QL(query: String): N1QLQuery = {
+    CouchbaseN1QL.N1QL(query)(this)
+  }
+
   def shutdown() {
     buckets.foreach(t => t._2.disconnect())
   }
