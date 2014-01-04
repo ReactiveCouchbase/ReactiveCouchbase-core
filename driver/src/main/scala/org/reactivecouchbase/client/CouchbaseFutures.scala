@@ -8,7 +8,7 @@ import net.spy.memcached.ops.OperationStatus
 import play.api.libs.json.Reads
 import org.reactivecouchbase.CouchbaseBucket
 
-object CouchbaseFutures {
+private[reactivecouchbase] object CouchbaseFutures {
 
   def waitForBulkRaw(future: BulkFuture[java.util.Map[String, AnyRef]], b: CouchbaseBucket, ec : ExecutionContext): Future[java.util.Map[String, AnyRef]] = {
     val promise = Promise[java.util.Map[String, AnyRef]]()
