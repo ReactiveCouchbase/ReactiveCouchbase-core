@@ -2,6 +2,7 @@ import com.couchbase.client.protocol.views.{Stale, Query}
 import org.reactivecouchbase.experimental.Views
 import org.reactivecouchbase.ReactiveCouchbaseDriver
 import org.specs2.mutable._
+import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
 import scala.concurrent._
 
@@ -49,7 +50,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     "Check view API" in {
       Await.result(bucket.view("persons", "by_name").flatMap { view =>
         Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true))
-          .map(res => println(s"\n\n\n${Json.prettyPrint(res)}\n\n\n"))
+          .flatMap(e => e.apply(Iteratee.foreach( doc => println(doc))).map(_.run))
       }, timeout)
       success
     }
