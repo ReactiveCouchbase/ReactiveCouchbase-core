@@ -122,7 +122,7 @@ object ReactiveCouchbaseDriver {
 
 object Couchbase extends Read with Write with Delete with Counters with Queries with JavaApi with Atomic {}
 
-object ExecutionContextExecutorServiceBridge {
+private[reactivecouchbase] object ExecutionContextExecutorServiceBridge {
   def apply(ec: ExecutionContext): ExecutionContextExecutorService = ec match {
     case null => throw new Throwable("ExecutionContext to ExecutorService conversion failed !!!")
     case eces: ExecutionContextExecutorService => eces
