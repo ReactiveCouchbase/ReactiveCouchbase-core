@@ -17,20 +17,20 @@ import akka.pattern.after
 import scala.util.control.ControlThrowable
 import org.reactivecouchbase.CouchbaseExpiration._
 
-case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int)
+private[reactivecouchbase] case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int)
 
-case class AtomicSucess[T](key: String)
-case class AtomicError[T](request: AtomicRequest[T], message: String) extends ControlThrowable
-case class AtomicTooMuchTryError[T](request: AtomicRequest[T]) extends ControlThrowable
-case class AtomicNoKeyFoundError[T](request: AtomicRequest[T]) extends ControlThrowable
-case class AtomicWeirdError() extends ControlThrowable
-case class LoggerHolder(logger: LoggerLike)
+private[reactivecouchbase] case class AtomicSucess[T](key: String)
+private[reactivecouchbase] case class AtomicError[T](request: AtomicRequest[T], message: String) extends ControlThrowable
+private[reactivecouchbase] case class AtomicTooMuchTryError[T](request: AtomicRequest[T]) extends ControlThrowable
+private[reactivecouchbase] case class AtomicNoKeyFoundError[T](request: AtomicRequest[T]) extends ControlThrowable
+private[reactivecouchbase] case class AtomicWeirdError() extends ControlThrowable
+private[reactivecouchbase] case class LoggerHolder(logger: LoggerLike)
 
-object AtomicActor {
+private[reactivecouchbase] object AtomicActor {
   def props[T]: Props = Props(classOf[AtomicActor[T]])
 }
 
-class AtomicActor[T] extends Actor {
+private[reactivecouchbase] class AtomicActor[T] extends Actor {
 
   var logger: Option[LoggerLike] = None
 
