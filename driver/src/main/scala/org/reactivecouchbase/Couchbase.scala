@@ -121,20 +121,3 @@ object ReactiveCouchbaseDriver {
 }
 
 object Couchbase extends Read with Write with Delete with Counters with Queries with JavaApi with Atomic {}
-
-private[reactivecouchbase] object ExecutionContextExecutorServiceBridge {
-  def apply(ec: ExecutionContext): ExecutionContextExecutorService = ec match {
-    case null => throw new Throwable("ExecutionContext to ExecutorService conversion failed !!!")
-    case eces: ExecutionContextExecutorService => eces
-    case other => new AbstractExecutorService with ExecutionContextExecutorService {
-      override def prepare(): ExecutionContext = other
-      override def isShutdown = false
-      override def isTerminated = false
-      override def shutdown() = ()
-      override def shutdownNow() = Collections.emptyList[Runnable]
-      override def execute(runnable: Runnable): Unit = other execute runnable
-      override def reportFailure(t: Throwable): Unit = other reportFailure t
-      override def awaitTermination(length: Long, unit: TimeUnit): Boolean = false
-    }
-  }
-}
