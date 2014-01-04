@@ -47,19 +47,20 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     }
 
     "Check view API" in {
-      Await.result(bucket.view("persons", "by_name").map { view =>
-        Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).map(res => println(s"\n\n\n===============================\n\n${Json.prettyPrint(res)}\n\n\n"))
+      Await.result(bucket.view("persons", "by_name").flatMap { view =>
+        Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true))
+          .map(res => println(s"\n\n\n${Json.prettyPrint(res)}\n\n\n"))
       }, timeout)
       success
     }
 
-    /*"delete all data" in {
+    "delete all data" in {
       Await.result(bucket.deleteDesignDoc("persons"), timeout)
       for(i <- 0 to 99) {
         Await.result(bucket.delete(s"person--$i"), timeout)
       }
       success
-    }*/
+    }
 
 
     "shutdown now" in {
