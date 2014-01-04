@@ -20,10 +20,7 @@ object Views {
 
 
   /*private[experimental]*/ def query(view: View, query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[JsArray] = {
-    var url = s"http://${bucket.hosts.head}:8092${view.getURI}${query.toString}"
-    if (query.willIncludeDocs()) {
-      url = url + "&include_docs=true"      // but why ???????????????????????????????????
-    }
+    val url = s"http://${bucket.hosts.head}:8092${view.getURI}${query.toString}&include_docs=${query.willIncludeDocs()}}"
     val promise = Promise[String]()
     client.prepareGet(url).execute(new AsyncCompletionHandler[Response]() {
       override def onCompleted(response: Response) = {
