@@ -1,21 +1,21 @@
-import java.util.concurrent.TimeUnit
+import com.couchbase.client.protocol.views.{Stale, Query}
+import org.reactivecouchbase.experimental.Views
 import org.reactivecouchbase.ReactiveCouchbaseDriver
 import org.specs2.mutable._
+import play.api.libs.json.Json
 import scala.concurrent._
-import scala.concurrent.duration._
 
 class ViewsSpec extends Specification with Tags {
   sequential
 
-  implicit val ec = ExecutionContext.Implicits.global
-  val timeout = Duration(10, TimeUnit.SECONDS)
+  import SearchUtils._
 
   """
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...
   """ in ok
 
   val driver = ReactiveCouchbaseDriver()
-  val bucket = driver.bucket("default")
+  implicit val bucket = driver.bucket("default")
 
   "ReactiveCouchbase Views API" should {
 
@@ -47,17 +47,19 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     }
 
     "Check view API" in {
-
+      Await.result(bucket.view("persons", "by_name").map { view =>
+        Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).map(res => println(s"\n\n\n===============================\n\n${Json.prettyPrint(res)}\n\n\n"))
+      }, timeout)
       success
     }
 
-    "delete all data" in {
+    /*"delete all data" in {
       Await.result(bucket.deleteDesignDoc("persons"), timeout)
       for(i <- 0 to 99) {
         Await.result(bucket.delete(s"person--$i"), timeout)
       }
       success
-    }
+    }*/
 
 
     "shutdown now" in {
