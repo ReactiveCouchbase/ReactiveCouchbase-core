@@ -134,7 +134,7 @@ trait Atomic {
     waitForOperationStatus(bucket.couchbaseClient.asyncUnlock(key, casId), bucket, ec)
   }
 
-  def atomicallyUpdate[T](key: String, operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+  def atomicallyUpdate[T](key: String)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     implicit val timeout = Timeout(8 minutes)
     val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1)
     val atomic_actor = bucket.driver.system().actorOf(AtomicActor.props[T])
@@ -143,7 +143,7 @@ trait Atomic {
   }
 
   def atomicUpdate[T](key: String, operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
-    atomicallyUpdate(key, (arg: T) => Future(operation(arg)))(bucket, ec, r, w) 
+    atomicallyUpdate(key)((arg: T) => Future(operation(arg)))(bucket, ec, r, w) 
   }
 
 }
