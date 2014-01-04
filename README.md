@@ -382,39 +382,17 @@ couchbase {
     pass="$password"
     timeout="0"
   }]
-   failfutures=false                 # fail Scala future if OperationStatus is failed, optional
-   useplayec=true                    # the plugin can use play.api.libs.concurrent.Execution.Implicits.defaultContext as execution context, optional
-   json {                            # JSON related configuration, optional
-     validate=true                   # JSON structure validation fail
-   }
-   driver {                          # couchbase driver related config
-     useec=true                      # use couchbase-executioncontext as ExecutorService for couchbase driver, optional
-   }
-   cache {                           # cache related configuration, optional
-     namespace=""                    # key prefix if couchbase used as cache with the cache plugin, optional
-     enabled=false                   # enable cache with couchbase, optional
-   }
-   fixtures {                        # fixtures related configuration, optional
-     disabled=false                  # disable fixtures, optional
-     documents="conf/fixtures"       # path for fixtures files, optional
-     $bucketName {
-       insert=true                   # insert fixtures, optional
-       key="_id"                     # key name for each fixture object, optional
-     }
-   }
-   evolutions {                      # evolutions related configuration, optional
-     disabled=false                  # disable evolutions, optional
-     documents="conf/views"          # path for evolution files, optional
-     use.locks=true                  # use locks for evolutions, optional
-     $bucketName {
-       apply=true                    # apply evolution on start
-       synchronize=true              # synchronize with existing
-     }
-   }
-   n1ql {                            # N1QL access from API, optionnal
-     host="127.0.0.1"                # Host of the N1QL search server
-     port=8093                       # Port of the N1QL search server
-   }
+  failfutures=false                 # fail Scala future if OperationStatus is failed, optional
+  json {                            # JSON related configuration, optional
+    validate=true                   # JSON structure validation fail
+  }
+  driver {                          # couchbase driver related config
+    useec=true                      # use couchbase-executioncontext as ExecutorService for couchbase driver, optional
+  }
+  n1ql {                            # N1QL access from API, optionnal
+    host="127.0.0.1"                # Host of the N1QL search server
+    port=8093                       # Port of the N1QL search server
+  }
 }
 
 ```
