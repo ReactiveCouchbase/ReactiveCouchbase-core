@@ -15,8 +15,8 @@ case class ViewRow(document: Option[JsValue], id: Option[String], key: String, v
 }
 
 case class TypedViewRow[T](document: Option[JsValue], id: Option[String], key: String, value: String, meta: Meta, reader: Reads[T]) {
-  def JsResult: JsResult[T] = document.map( doc => reader.reads(doc)).getOrElse(JsError())
-  def Instance: Option[T] = JsResult match {
+  def JsResult: JsResult[T] = document.map( doc => reader.reads(doc)).getOrElse(JsError())  // TODO : cache it
+  def Instance: Option[T] = JsResult match {  // TODO : cache it
     case JsSuccess(doc, _) => Some(doc)
     case JsError(errors) => None
   }
