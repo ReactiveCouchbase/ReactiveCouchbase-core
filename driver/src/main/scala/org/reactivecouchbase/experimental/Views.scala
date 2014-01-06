@@ -6,6 +6,7 @@ import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.{Promise, Future, ExecutionContext}
 import play.api.libs.json._
 import play.api.libs.iteratee.{Enumeratee, Enumerator}
+import org.reactivecouchbase.client.{RawRow, QueryEnumerator}
 
 case class Meta(id: String, rev: String, expiration: Long, flags: Long)
 
@@ -24,9 +25,10 @@ case class TypedViewRow[T](document: Option[JsValue], id: Option[String], key: S
   def withReads[A](r: Reads[A]): TypedViewRow[A] = TypedViewRow[A](document, id, key, value, meta, r)
 }
 
+// TODO : no stateful object here, provide client
 object Views {
 
-  private val config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
+  private[reactivecouchbase] val config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
     .setAllowPoolingConnection(true)
     .setCompressionEnabled(true)
     .setRequestTimeoutInMs(600000)
@@ -90,5 +92,17 @@ object Views {
         transformation(doc, id, key, value, meta)
       }(ec))
     }(ec)
+  }
+
+  private[reactivecouchbase] def internalCompatRawSearch(view: View, query: Query, bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
+    QueryEnumerator(internalViewQuery(view, query)(bucket, ec).map { array =>
+      Enumerator.enumerate(array.value)(ec).through(Enumeratee.map[JsValue] { slug =>
+        val key = (slug \ "key").asOpt[String].getOrElse("")
+        val value = (slug \ "value").asOpt[String].getOrElse("")
+        val id = (slug \ "id").asOpt[String]
+        val doc = (slug \ "doc" \ "json").asOpt[JsValue].map(Json.stringify)
+        RawRow(doc, id, key, value)
+      }(ec))
+    }(ec))
   }
 }

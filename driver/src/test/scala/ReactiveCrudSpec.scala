@@ -1,4 +1,3 @@
-import com.couchbase.client.protocol.views.{Stale, Query}
 import java.util.concurrent.TimeUnit
 import org.reactivecouchbase.crud.ReactiveCRUD
 import org.reactivecouchbase.ReactiveCouchbaseDriver

@@ -12,6 +12,7 @@ import collection.JavaConversions._
 import play.api.libs.json.JsSuccess
 import scala.Some
 import play.api.libs.json.JsObject
+import org.reactivecouchbase.experimental.Views
 
 case class RawRow(document: Option[String], id: Option[String], key: String, value: String) {
   def toTuple = (document, id, key, value)
@@ -60,17 +61,21 @@ trait Queries {
   }
 
   def rawSearch(view: View)(query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
-    QueryEnumerator(waitForHttp[ViewResponse]( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
-      Enumerator.enumerate(results.iterator()) &> Enumeratee.map[ViewRow] {
-        case r: ViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
-        case r: ViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
-        case r: ViewRowNoDocs => RawRow(None, Some(r.getId), r.getKey, r.getValue)
-        case r: ViewRowReduced => RawRow(None, None, r.getKey, r.getValue)
-        case r: SpatialViewRowNoDocs => RawRow(None, Some(r.getId), r.getKey, r.getValue)
-        case r: SpatialViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
-        case r: SpatialViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
-      }
-    })
+    if (bucket.useExperimentalQueries) {
+      Views.internalCompatRawSearch(view, query, bucket, ec)
+    } else {
+      QueryEnumerator(waitForHttp[ViewResponse]( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
+        Enumerator.enumerate(results.iterator()) &> Enumeratee.map[ViewRow] {
+          case r: ViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
+          case r: ViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
+          case r: ViewRowNoDocs => RawRow(None, Some(r.getId), r.getKey, r.getValue)
+          case r: ViewRowReduced => RawRow(None, None, r.getKey, r.getValue)
+          case r: SpatialViewRowNoDocs => RawRow(None, Some(r.getId), r.getKey, r.getValue)
+          case r: SpatialViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
+          case r: SpatialViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
+        }
+      })
+    }
   }
 
   def search[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = {

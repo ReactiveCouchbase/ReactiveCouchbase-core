@@ -2,12 +2,11 @@ package org.reactivecouchbase
 
 import com.couchbase.client.{ CouchbaseConnectionFactoryBuilder, CouchbaseClient }
 import java.net.URI
-import java.util.concurrent.{ConcurrentHashMap, AbstractExecutorService, TimeUnit}
+import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import collection.JavaConversions._
 import collection.mutable.ArrayBuffer
-import scala.concurrent.{ ExecutionContextExecutorService, ExecutionContext }
+import scala.concurrent.ExecutionContext
 import akka.actor.{Scheduler, ActorSystem}
-import java.util.Collections
 import org.reactivecouchbase.client._
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -53,6 +52,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
   private[reactivecouchbase] val jsonStrictValidation = cbDriver.configuration.getBoolean("couchbase.json.validate").getOrElse(true)
   private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
   private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.actorctx.timeout").getOrElse(1000L)
+  private[reactivecouchbase] val useExperimentalQueries: Boolean = cbDriver.configuration.getBoolean("couchbase.experimental.queries").getOrElse(false)
 }
 
 class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike) {
