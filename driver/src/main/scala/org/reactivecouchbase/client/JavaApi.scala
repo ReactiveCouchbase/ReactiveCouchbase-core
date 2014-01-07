@@ -16,19 +16,66 @@ trait JavaApi { self: Queries =>
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Java Operations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+  /**
+   *
+   * Replace a document
+   *
+   * @param key the key of the doc
+   * @param exp expiration of the doc
+   * @param value the document
+   * @param persistTo persistance flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
+   */
   def javaReplace(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.replace(key, exp, value, persistTo, replicateTo), bucket, ec )
   }
 
+  /**
+   *
+   * Add a document
+   *
+   * @param key the key of the doc
+   * @param exp expiration of the doc
+   * @param value the document
+   * @param persistTo persistance flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
+   */
   def javaAdd(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.add(key, exp, value, persistTo, replicateTo), bucket, ec )
   }
 
+  /**
+   *
+   * Set a document
+   *
+   * @param key the key of the doc
+   * @param exp expiration of the doc
+   * @param value the document
+   * @param persistTo persistance flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
+   */
   def javaSet(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.set(key, exp, value, persistTo, replicateTo), bucket, ec )
   }
 
+  /**
+   *
+   * Fetch a raw document
+   *
+   * @param key the key of the doc
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return the raw document
+   */
   def javaGet(key: String, bucket: CouchbaseBucket, ec: ExecutionContext): Future[String] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case s: String => Future.successful(s)
@@ -36,6 +83,17 @@ trait JavaApi { self: Queries =>
     }(ec)
   }
 
+  /**
+   *
+   * Fetch a document
+   *
+   * @param key the key of the doc
+   * @param clazz the class of the doc
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the document
+   */
   def javaGet[T](key: String, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case value: String => Future.successful(play.libs.Json.fromJson(play.libs.Json.parse(value), clazz))
@@ -43,6 +101,17 @@ trait JavaApi { self: Queries =>
     }(ec)
   }
 
+  /**
+   *
+   * Fetch an optional document
+   *
+   * @param key the key of the doc
+   * @param clazz the class of the doc
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the list of docs
+   */
   def javaOptGet[T](key: String, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[java.util.List[T]] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).map { f =>
       val opt: java.util.List[T] = f match {
@@ -53,12 +122,37 @@ trait JavaApi { self: Queries =>
     }(ec)
   }
 
+  /**
+   *
+   * Perform a query
+   *
+   * @param docName design document name
+   * @param viewName the name of the view
+   * @param query the actual query
+   * @param clazz the class of the doc
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the list of docs
+   */
   def javaFind[T](docName:String, viewName: String, query: Query, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[java.util.Collection[T]] = {
     view(docName, viewName)(bucket, ec).flatMap { view =>
       javaFind[T](view, query, clazz, bucket, ec)
     }(ec)
   }
 
+  /**
+   *
+   * Perform a query
+   *
+   * @param view the view to query
+   * @param query the actual query
+   * @param clazz the class of the doc
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the list of docs
+   */
   def javaFind[T](view: View, query: Query, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[java.util.Collection[T]] = {
     waitForHttp( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
       asJavaCollection(results.iterator().collect {
@@ -70,12 +164,37 @@ trait JavaApi { self: Queries =>
     }(ec)
   }
 
+  /**
+   *
+   * Perform a query
+   *
+   * @param docName design document name
+   * @param viewName the name of the view
+   * @param query the actual query
+   * @param clazz the class of the doc
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the list of rows
+   */
   def javaFullFind[T](docName:String, viewName: String, query: Query, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[java.util.Collection[Row[T]]] = {
     view(docName, viewName)(bucket, ec).flatMap { view =>
       javaFullFind[T](view, query, clazz, bucket, ec)
     }(ec)
   }
 
+  /**
+   *
+   * Perform a query
+   *
+   * @param view the view to query
+   * @param query the actual query
+   * @param clazz the class of the doc
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the list of rows
+   */
   def javaFullFind[T](view: View, query: Query, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[java.util.Collection[Row[T]]] = {
     waitForHttp( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
       asJavaCollection(results.iterator().map {
@@ -92,10 +211,28 @@ trait JavaApi { self: Queries =>
     }(ec)
   }
 
+  /**
+   *
+   * Fetch view
+   *
+   * @param docName the design doc name
+   * @param viewName the name of the view
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return the view
+   */
   def javaView(docName: String, viewName: String, bucket: CouchbaseBucket, ec: ExecutionContext): Future[View] = {
     waitForHttp[View]( bucket.couchbaseClient.asyncGetView(docName, viewName), bucket, ec )
   }
 
+  /**
+   *
+   * Java long conversion
+   *
+   * @param f future to cast
+   * @param ec ExecutionContext for async processing
+   * @return casted future
+   */
   def asJavaLong(f: Future[Long], ec: ExecutionContext): Future[java.lang.Long] = {
     f.map { (v: Long) =>
       val value: java.lang.Long = v.asInstanceOf[java.lang.Long]
@@ -103,6 +240,14 @@ trait JavaApi { self: Queries =>
     }(ec)
   }
 
+  /**
+   *
+   * Java int conversion
+   *
+   * @param f future to cast
+   * @param ec ExecutionContext for async processing
+   * @return casted future
+   */
   def asJavaInt(f: Future[Int], ec: ExecutionContext): Future[java.lang.Integer] = {
     f.map { (v: Int) =>
       val value: java.lang.Integer = v.asInstanceOf[java.lang.Integer]
@@ -111,8 +256,21 @@ trait JavaApi { self: Queries =>
   }
 }
 
+/**
+ *
+ * Result row representation
+ *
+ * @param d the document
+ * @param id the key of the doc
+ * @param key the indexed key
+ * @param value the indexed value
+ * @tparam T type of the doc
+ */
 class Row[T](d: Option[T], val id: String, val key: String, val value: String) {
 
+  /**
+   * @return the document
+   */
   def document = d.getOrElse(null)
 
   private[reactivecouchbase] def docOpt = d
