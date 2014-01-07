@@ -13,10 +13,30 @@ import collection.JavaConversions._
  */
 trait Read {
 
+  /**
+   *
+   * Fetch keys stats
+   *
+   * @param key the key of the document
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return
+   */
   def keyStats(key: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Map[String, String]] = {
     waitForOperation( bucket.couchbaseClient.getKeyStats(key), bucket, ec ).map(_.toMap)
   }
 
+  /**
+   *
+   * fetch a document
+   *
+   * @param key the key of the document
+   * @param tc the transcodeuse
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def get[T](key: String, tc: Transcoder[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Option[T]] = {
     waitForGet[T]( bucket.couchbaseClient.asyncGet(key, tc), bucket, ec ) map {
       case value: T => Some[T](value)
@@ -24,6 +44,15 @@ trait Read {
     }
   }
 
+  /**
+   *
+   * Fetch a stream of documents
+   *
+   * @param keysEnumerator stream of keys
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return
+   */
   def rawFetch(keysEnumerator: Enumerator[String])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[(String, String)] = {
     QueryEnumerator(keysEnumerator.apply(Iteratee.getChunks[String]).flatMap(_.run).flatMap { keys =>
       waitForBulkRaw( bucket.couchbaseClient.asyncGetBulk(keys), bucket, ec ).map { results =>
@@ -34,6 +63,17 @@ trait Read {
     })
   }
 
+  /**
+   *
+   * Fetch a stream of documents
+   *
+   * @param keysEnumerator stream of keys
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def fetch[T](keysEnumerator: Enumerator[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[(String, T)] = {
     QueryEnumerator(rawFetch(keysEnumerator)(bucket, ec).enumerate.map { enumerator =>
       enumerator &> Enumeratee.map[(String, String)]( t => (t._1, r.reads(Json.parse(t._2))) ) &> Enumeratee.collect[(String, JsResult[T])] {
@@ -43,32 +83,109 @@ trait Read {
     })
   }
 
+  /**
+   *
+   * Fetch a stream of documents
+   *
+   * @param keysEnumerator stream of keys
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def fetchValues[T](keysEnumerator: Enumerator[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
     QueryEnumerator(fetch[T](keysEnumerator)(bucket, r, ec).enumerate.map { enumerator =>
       enumerator &> Enumeratee.map[(String, T)](_._2)
     })
   }
 
+  /**
+   *
+   * Fetch a stream of documents
+   *
+   * @param keys the key of the documents
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def fetch[T](keys: Seq[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[(String, T)] = {
     fetch[T](Enumerator.enumerate(keys))(bucket, r, ec)
   }
 
+  /**
+   *
+   * Fetch a stream of documents
+   *
+   * @param keys the key of the documents
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def fetchValues[T](keys: Seq[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
     fetchValues[T](Enumerator.enumerate(keys))(bucket, r, ec)
   }
 
+  /**
+   *
+   * Fetch a optional document
+   *
+   * @param key the key of the document
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def get[T](key: String)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     fetchValues[T](Enumerator(key))(bucket, r, ec).headOption(ec)
   }
 
+  /**
+   *
+   * Fetch a optional document and its key
+   *
+   * @param key the key of the document
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def getWithKey[T](key: String)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Option[(String, T)]] = {
     fetch[T](Enumerator(key))(bucket, r, ec).headOption(ec)
   }
 
+  /**
+   *
+   * Fetch a stream document and their key
+   *
+   * @param keys the keys of the documents
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def fetchWithKeys[T](keys: Seq[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Map[String, T]] = {
     fetch[T](keys)(bucket, r, ec).toList(ec).map(_.toMap)
   }
 
+  /**
+   *
+   * Fetch a stream document and their key
+   *
+   * @param keys the keys of the documents
+   * @param bucket the bucket to use
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def fetchWithKeys[T](keys: Enumerator[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Map[String, T]] = {
     fetch[T](keys)(bucket, r, ec).toList(ec).map(_.toMap)
   }
