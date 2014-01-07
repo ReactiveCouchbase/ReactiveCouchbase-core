@@ -21,17 +21,17 @@ trait Write {
 
   /**
    *
+   * Set a document that contains an id field
    *
-   *
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setWithId[T <: {def id:String}](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     set[T](value.id, value, exp, persistTo, replicateTo)(bucket, w, ec)
@@ -39,18 +39,18 @@ trait Write {
 
   /**
    *
+   * Set a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     set[T](key(value), value, exp, persistTo, replicateTo)(bucket, w, ec)
@@ -58,15 +58,15 @@ trait Write {
 
   /**
    *
+   * Set a document
    *
-   *
-   * @param key
-   * @param value
-   * @param tc
-   * @param bucket
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param tc transcoder
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def set[T](key: String, value: T, tc: Transcoder[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.set(key, Constants.expiration, value, tc), bucket, ec )
@@ -74,16 +74,16 @@ trait Write {
 
   /**
    *
+   * Set a document
    *
-   *
-   * @param key
-   * @param exp
-   * @param value
-   * @param tc
-   * @param bucket
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param exp expiration of the doc
+   * @param value the document
+   * @param tc transcoder
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def set[T](key: String, exp: CouchbaseExpirationTiming, value: T, tc: Transcoder[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.set(key, exp, value, tc), bucket, ec )
@@ -91,18 +91,18 @@ trait Write {
 
   /**
    *
+   * Set a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def set[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.set(key, exp, Json.stringify(w.writes(value)), persistTo, replicateTo), bucket, ec )
@@ -110,17 +110,17 @@ trait Write {
 
   /**
    *
+   * Set a stream of documents
    *
-   *
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
@@ -130,18 +130,18 @@ trait Write {
 
   /**
    *
+   * Set a stream of documents
    *
-   *
-   * @param key
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
@@ -155,17 +155,17 @@ trait Write {
 
   /**
    *
+   * Add a document
    *
-   *
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addWithId[T <: {def id:String}](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     add[T](value.id, value, exp, persistTo, replicateTo)(bucket, w, ec)
@@ -173,18 +173,18 @@ trait Write {
 
   /**
    *
+   * Add a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     add[T](key(value), value, exp, persistTo, replicateTo)(bucket, w, ec)
@@ -192,18 +192,18 @@ trait Write {
 
   /**
    *
+   * Add a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def add[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.add(key, exp, Json.stringify(w.writes(value)), persistTo, replicateTo), bucket, ec )
@@ -211,17 +211,17 @@ trait Write {
 
   /**
    *
+   * Add a stream of documents
    *
-   *
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
@@ -231,18 +231,18 @@ trait Write {
 
   /**
    *
+   * Add a stream of documents
    *
-   *
-   * @param key
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
@@ -256,17 +256,17 @@ trait Write {
 
   /**
    *
+   * Replace a document
    *
-   *
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceWithId[T <: {def id:String}](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     replace[T](value.id, value, exp, persistTo, replicateTo)(bucket, w, ec)
@@ -274,18 +274,18 @@ trait Write {
 
   /**
    *
+   * Replace a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     replace[T](key(value), value, exp, persistTo, replicateTo)(bucket, w, ec)
@@ -293,18 +293,18 @@ trait Write {
 
   /**
    *
+   * Replace a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replace[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.replace(key, exp, Json.stringify(w.writes(value)), persistTo, replicateTo), bucket, ec )
@@ -312,17 +312,17 @@ trait Write {
 
   /**
    *
+   * Replace a stream documents
    *
-   *
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
@@ -332,18 +332,18 @@ trait Write {
 
   /**
    *
+   * Replace a stream documents
    *
-   *
-   * @param key
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param bucket
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
@@ -356,9 +356,9 @@ trait Write {
    * Flush the current bucket
    *
    * @param delay delay to flush
-   * @param bucket the current bucket
+   * @param bucket the bucket to use
    * @param ec ExecutionContext for async processing
-   * @return the operations tatus
+   * @return the operation status
    */
   def flush(delay: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.flush(delay), bucket, ec )
@@ -368,9 +368,9 @@ trait Write {
    *
    * Flush the current bucket
    *
-   * @param bucket the current bucket
+   * @param bucket the bucket to use
    * @param ec ExecutionContext for async processing
-   * @return the operations tatus
+   * @return the operation status
    */
   def flush()(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     flush(Constants.expiration)(bucket, ec)
