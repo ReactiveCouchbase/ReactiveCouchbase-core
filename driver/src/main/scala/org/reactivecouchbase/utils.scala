@@ -11,6 +11,9 @@ import scala.concurrent.{ ExecutionContextExecutorService, ExecutionContext }
 import java.util.Collections
 import java.util.concurrent.{ConcurrentHashMap, AbstractExecutorService, TimeUnit}
 
+/**
+ * Trait to wrap Logger
+ */
 trait LoggerLike {
 
   val logger: org.slf4j.Logger
@@ -69,11 +72,22 @@ trait LoggerLike {
   def logger[T](clazz: Class[T]): LoggerLike
 }
 
+/**
+ *
+ * Standard logger
+ *
+ * @param logger wrapped logger
+ */
 class RCLogger(val logger: org.slf4j.Logger) extends LoggerLike  {
   def logger(name: String): LoggerLike = new RCLogger(LoggerFactory.getLogger(name))
   def logger[T](clazz: Class[T]): LoggerLike = new RCLogger(LoggerFactory.getLogger(clazz))
 }
 
+/**
+ *
+ * Base logger for ReactiveCouchbase
+ *
+ */
 object StandaloneLogger extends LoggerLike {
   val logger = LoggerFactory.getLogger("ReactiveCouchbase")
   def logger(name: String): LoggerLike = new RCLogger(LoggerFactory.getLogger(name))
@@ -127,10 +141,38 @@ class Configuration(underlying: Config) {
   }
 }
 
+/**
+ * API to create Future that success after a duration
+ */
 object Timeout {
+
+  /**
+   *
+   * Create a Future that success after a duration
+   *
+   * @param message the message wrapped by the future after success
+   * @param duration the duration after which Future is a success
+   * @param scheduler the Scheduler to manager duration
+   * @param ec the Execution Context for Future execution
+   * @tparam A Type of the message
+   * @return the Future created
+   */
   def timeout[A](message: => A, duration: scala.concurrent.duration.Duration, scheduler: Scheduler)(implicit ec: ExecutionContext): Future[A] = {
     timeout(message, duration.toMillis, TimeUnit.MILLISECONDS, scheduler)
   }
+
+  /**
+   *
+   * Create a Future that success after a duration
+   *
+   * @param message the message wrapped by the future after success
+   * @param duration the duration after which Future is a success
+   * @param unit the unit of duration
+   * @param scheduler the Scheduler to manager duration
+   * @param ec the Execution Context for Future execution
+   * @tparam A Type of the message
+   * @return the Future created
+   */
   def timeout[A](message: => A, duration: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, scheduler: Scheduler)(implicit ec: ExecutionContext): Future[A] = {
     val p = Promise[A]()
     scheduler.scheduleOnce(FiniteDuration(duration, unit)) {
@@ -140,6 +182,9 @@ object Timeout {
   }
 }
 
+/**
+ * Bridge to transform any ExecutionContext in ExecutorService
+ */
 object ExecutionContextExecutorServiceBridge {
   def apply(ec: ExecutionContext): ExecutionContextExecutorService = ec match {
     case null => throw new Throwable("ExecutionContext to ExecutorService conversion failed !!!")
