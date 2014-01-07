@@ -8,13 +8,44 @@ import play.api.libs.json._
 import play.api.libs.iteratee.{Enumeratee, Enumerator}
 import org.reactivecouchbase.client.{RawRow, QueryEnumerator}
 
+/**
+ *
+ * Metadata for each retrieved document
+ *
+ * @param id the key of the document
+ * @param rev the revision of the document
+ * @param expiration the expiration (UNIX epoch ???)
+ * @param flags flags of the document
+ */
 case class Meta(id: String, rev: String, expiration: Long, flags: Long)
 
+/**
+ *
+ * Representation of a document from a Query (with raw values)
+ *
+ * @param document maybe contains the value of the stored document
+ * @param id maybe the key of the document (can be None if reduced query)
+ * @param key the index key of the document
+ * @param value the value
+ * @param meta the metadata of the doc
+ */
 case class ViewRow(document: Option[JsValue], id: Option[String], key: String, value: String, meta: Meta) {
   def toTuple = (document, id, key, value, meta)
   def withReads[A](r: Reads[A]): TypedViewRow[A] = TypedViewRow[A](document, id, key, value, meta, r)
 }
 
+/**
+ *
+ * Representation of a document from a Query (with typed values)
+ *
+ * @param document maybe contains the value of the stored document
+ * @param id maybe the key of the document (can be None if reduced query)
+ * @param key the index key of the document
+ * @param value the value
+ * @param meta the metadata of the doc
+ * @param reader Json reader for the document
+ * @tparam T the type of the document
+ */
 case class TypedViewRow[T](document: Option[JsValue], id: Option[String], key: String, value: String, meta: Meta, reader: Reads[T]) {
   def JsResult: JsResult[T] = document.map( doc => reader.reads(doc)).getOrElse(JsError())  // TODO : cache it
   def Instance: Option[T] = JsResult match {  // TODO : cache it
@@ -25,8 +56,21 @@ case class TypedViewRow[T](document: Option[JsValue], id: Option[String], key: S
   def withReads[A](r: Reads[A]): TypedViewRow[A] = TypedViewRow[A](document, id, key, value, meta, r)
 }
 
+/**
+ * Custom API for Couchbase view querying
+ */
 object Views {
 
+  /**
+   *
+   * Perfom the actual HTTP request to query views using ning async http client
+   *
+   * @param view the view used for querying
+   * @param query the actual query
+   * @param bucket the bucket used for querying
+   * @param ec the ExecutionContext used for async processing
+   * @return the future JsArray result
+   */
   private[experimental] def internalViewQuery(view: View, query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[JsArray] = {
     val url = s"http://${bucket.hosts.head}:8092${view.getURI}${query.toString}&include_docs=${query.willIncludeDocs()}"
     val promise = Promise[String]()
@@ -46,22 +90,80 @@ object Views {
     promise.future.map(body => (Json.parse(body) \ "rows").as[JsArray])
   }
 
+  /**
+   *
+   * Raw query without providing an actual view
+   *
+   * @param docName name of the design doc
+   * @param viewName name of the view
+   * @param q the actual query
+   * @param bucket the bucket used for querying
+   * @param ec the ExecutionContext used for async processing
+   * @return the future enumerator of documents
+   */
   def rawQuery(docName: String, viewName: String, q: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Enumerator[ViewRow]] = {
     bucket.view(docName, viewName).flatMap { view => rawQuery(view, q)(bucket, ec) }
   }
 
+  /**
+   *
+   * Typed query without providing an actual view
+   *
+   * @param docName
+   * @param viewName
+   * @param q the actual query
+   * @param bucket the bucket used for querying
+   * @param r
+   * @param ec the ExecutionContext used for async processing
+   * @tparam T the type of documents
+   * @return the future enumerator of documents
+   */
   def query[T](docName: String, viewName: String, q: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Enumerator[TypedViewRow[T]]] = {
     bucket.view(docName, viewName).flatMap { view => query(view, q)(bucket, r, ec) }
   }
 
+  /**
+   *
+   * Typed query
+   *
+   * @param view the view used for querying
+   * @param q the actual query
+   * @param bucket the bucket used for querying
+   * @param r
+   * @param ec the ExecutionContext used for async processing
+   * @tparam T the type of documents
+   * @return the future enumerator of documents
+   */
   def query[T](view: View, q: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Enumerator[TypedViewRow[T]]] = {
     internalQuery(view, q, { (doc, id, key, value, meta) => TypedViewRow[T](doc, id, key, value, meta, r) }, bucket, ec)
   }
 
+  /**
+   *
+   * Raw Query
+   *
+   * @param view the view used for querying
+   * @param q the actual query
+   * @param bucket the bucket used for querying
+   * @param ec the ExecutionContext used for async processing
+   * @return the future enumerator of documents
+   */
   def rawQuery(view: View, q: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Enumerator[ViewRow]] = {
     internalQuery(view, q, { (doc, id, key, value, meta) => ViewRow(doc, id, key, value, meta) }, bucket, ec)
   }
 
+  /**
+   *
+   * Internal method that transform JsArray to an Enumerator of R
+   *
+   * @param view the view for querying
+   * @param q the actual query
+   * @param transformation a function to transform slug data to R
+   * @param bucket the bucket used for querying
+   * @param ec the ExecutionContext used for async processing
+   * @tparam R the type of slugs (JsValue for something with Json format)
+   * @return the future Enumerator of R
+   */
   private[experimental] def internalQuery[R](view: View, q: Query,
         transformation: (Option[JsValue], Option[String], String, String, Meta) => R,
         bucket: CouchbaseBucket, ec: ExecutionContext): Future[Enumerator[R]] = {
@@ -83,6 +185,16 @@ object Views {
     }(ec)
   }
 
+  /**
+   *
+   * Bridge to use the experimental query API from the official API if flag is on
+   *
+   * @param view the view for querying
+   * @param query the actual query
+   * @param bucket the bucket used for querying
+   * @param ec the ExecutionContext used for async processing
+   * @return the QueryEnumerator that can stream the result of the query
+   */
   private[reactivecouchbase] def internalCompatRawSearch(view: View, query: Query, bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
     QueryEnumerator(internalViewQuery(view, query)(bucket, ec).map { array =>
       Enumerator.enumerate(array.value)(ec).through(Enumeratee.map[JsValue] { slug =>
