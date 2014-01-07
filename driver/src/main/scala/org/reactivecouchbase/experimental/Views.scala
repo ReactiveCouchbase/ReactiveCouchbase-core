@@ -25,23 +25,12 @@ case class TypedViewRow[T](document: Option[JsValue], id: Option[String], key: S
   def withReads[A](r: Reads[A]): TypedViewRow[A] = TypedViewRow[A](document, id, key, value, meta, r)
 }
 
-// TODO : no stateful object here, provide client
 object Views {
-
-  private[reactivecouchbase] val config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
-    .setAllowPoolingConnection(true)
-    .setCompressionEnabled(true)
-    .setRequestTimeoutInMs(600000)
-    .setIdleConnectionInPoolTimeoutInMs(600000)
-    .setIdleConnectionTimeoutInMs(600000)
-    .build()
-
-  private[reactivecouchbase] val client: AsyncHttpClient = new AsyncHttpClient(config)
 
   private[experimental] def internalViewQuery(view: View, query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[JsArray] = {
     val url = s"http://${bucket.hosts.head}:8092${view.getURI}${query.toString}&include_docs=${query.willIncludeDocs()}"
     val promise = Promise[String]()
-    client.prepareGet(url).execute(new AsyncCompletionHandler[Response]() {
+    bucket.httpClient.prepareGet(url).execute(new AsyncCompletionHandler[Response]() {
       override def onCompleted(response: Response) = {
         if (response.getStatusCode != 200) {
           promise.failure(new RuntimeException(s"Couchbase responded with status '${response.getStatusCode}' : ${response.getResponseBody}"))

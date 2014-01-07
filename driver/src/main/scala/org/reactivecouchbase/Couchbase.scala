@@ -9,6 +9,7 @@ import scala.concurrent.ExecutionContext
 import akka.actor.{Scheduler, ActorSystem}
 import org.reactivecouchbase.client._
 import com.typesafe.config.{Config, ConfigFactory}
+import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
 
 class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbaseDriver,
                        private[reactivecouchbase] val client: Option[CouchbaseClient],
@@ -53,6 +54,17 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
   private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
   private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.actorctx.timeout").getOrElse(1000L)
   private[reactivecouchbase] val useExperimentalQueries: Boolean = cbDriver.configuration.getBoolean("couchbase.experimental.queries").getOrElse(false)
+
+
+  private[reactivecouchbase] val config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
+    .setAllowPoolingConnection(true)
+    .setCompressionEnabled(true)
+    .setRequestTimeoutInMs(600000)
+    .setIdleConnectionInPoolTimeoutInMs(600000)
+    .setIdleConnectionTimeoutInMs(600000)
+    .build()
+
+  private[reactivecouchbase] val httpClient: AsyncHttpClient = new AsyncHttpClient(config)
 }
 
 class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike) {
