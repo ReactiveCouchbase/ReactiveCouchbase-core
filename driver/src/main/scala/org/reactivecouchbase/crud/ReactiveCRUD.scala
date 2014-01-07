@@ -155,7 +155,7 @@ trait ReactiveCRUD[T] {
    * Search for documents (result as stream)
    *
    * @param sel the query
-   * @param limit the size of the returned collection
+   * @param pageSize the size of the returned collection
    * @param skip to skip some documents
    * @return stream of results
    */
