@@ -54,6 +54,8 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
   private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
   private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.actorctx.timeout").getOrElse(1000L)
   private[reactivecouchbase] val useExperimentalQueries: Boolean = cbDriver.configuration.getBoolean("couchbase.experimental.queries").getOrElse(false)
+  private[reactivecouchbase] val N1QLHost = driver.configuration.getString("couchbase.n1ql.host")
+  private[reactivecouchbase] val N1QLPort = driver.configuration.getString("couchbase.n1ql.port")
 
 
   private[reactivecouchbase] val config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
@@ -110,7 +112,7 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
   def cappedBucket(name: String, ec: ExecutionContext, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), ec, max, reaper)
 
   def N1QL(query: String): N1QLQuery = {
-    CouchbaseN1QL.N1QL(query)(this)
+    CouchbaseN1QL.N1QL(query)(this.buckets.head._2)
   }
 
   def shutdown() {

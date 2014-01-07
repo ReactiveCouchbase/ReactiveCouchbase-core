@@ -6,7 +6,7 @@ import play.api.libs.json._
 import com.ning.http.client.{Response, AsyncCompletionHandler, AsyncHttpClient, AsyncHttpClientConfig}
 import org.reactivecouchbase.client.ReactiveCouchbaseException
 
-class N1QLQuery(query: String, host: String, port: String) {
+class N1QLQuery(bucket: CouchbaseBucket, query: String, host: String, port: String) {
   val url = s"http://${host}:${port}/query"
   def enumerateJson(implicit ec: ExecutionContext): Future[Enumerator[JsObject]] = {
     toJsArray(ec).map { arr =>
@@ -30,7 +30,7 @@ class N1QLQuery(query: String, host: String, port: String) {
 
   def toJsArray(implicit ec: ExecutionContext): Future[JsArray] = {
     val result = Promise[JsValue]()
-    CouchbaseN1QL.client.preparePost(url).addQueryParameter("q", query).execute(new AsyncCompletionHandler[Response]() {
+    bucket.httpClient.preparePost(url).addQueryParameter("q", query).execute(new AsyncCompletionHandler[Response]() {
       override def onCompleted(response: Response) = {
         result.success(Json.parse(response.getResponseBody))
         response
@@ -55,24 +55,14 @@ class N1QLQuery(query: String, host: String, port: String) {
 
 object CouchbaseN1QL {
 
-  private val config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
-    .setAllowPoolingConnection(true)
-    .setCompressionEnabled(true)
-    .setRequestTimeoutInMs(600000)
-    .setIdleConnectionInPoolTimeoutInMs(600000)
-    .setIdleConnectionTimeoutInMs(600000)
-    .build()
-
-  private[reactivecouchbase] val client: AsyncHttpClient = new AsyncHttpClient(config)
-
-  def N1QL(query: String, host: String, port: String): N1QLQuery = {
-    new N1QLQuery(query, host, port)
+  def N1QL(bucket: CouchbaseBucket, query: String, host: String, port: String): N1QLQuery = {
+    new N1QLQuery(bucket, query, host, port)
   }
 
-  def N1QL(query: String)(implicit driver: ReactiveCouchbaseDriver): N1QLQuery = {
-    val host = driver.configuration.getString("couchbase.n1ql.host").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
-    val port = driver.configuration.getString("couchbase.n1ql.port").getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
-    new N1QLQuery(query, host, port)
+  def N1QL(query: String)(implicit bucket: CouchbaseBucket): N1QLQuery = {
+    val host = bucket.N1QLHost.getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL host", "Cannot find N1QL host in couchbase.n1ql conf."))
+    val port = bucket.N1QLPort.getOrElse(throw new ReactiveCouchbaseException("Cannot find N1QL port", "Cannot find N1QL port in couchbase.n1ql conf."))
+    new N1QLQuery(bucket, query, host, port)
   }
 }
 
