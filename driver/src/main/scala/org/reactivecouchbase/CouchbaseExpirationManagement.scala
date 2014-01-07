@@ -2,10 +2,10 @@ package org.reactivecouchbase
 
 import scala.concurrent.duration._
 
-/*
- * Handling the expiration problem
- * 
- */
+/**
+ * A bunch of implicit conversion for handling the TTL issue of Couchbase operations.
+ * If TTL bigger than 30 days, then provide a UNIX epoch
+ **/
 object CouchbaseExpiration {
   sealed trait CouchbaseExpirationTiming
   case class CouchbaseExpirationTiming_byInt(value: Int) extends CouchbaseExpirationTiming
