@@ -21,15 +21,15 @@ trait BucketAPI {
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param docName
-   * @param viewName
-   * @param query
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param docName the name of the design doc
+   * @param viewName the name of the view
+   * @param query the actual query
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the list of docs
    */
   def find[T](docName: String, viewName: String)(query: Query)(implicit r: Reads[T], ec: ExecutionContext): Future[List[T]] = {
     Couchbase.find[T](docName, viewName)(query)(self, r, ec)
@@ -37,14 +37,14 @@ trait BucketAPI {
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param view
-   * @param query
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param view the view to query
+   * @param query the actual query
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the list of docs
    */
   def find[T](view: View)(query: Query)(implicit r: Reads[T], ec: ExecutionContext): Future[List[T]] = {
     Couchbase.find[T](view)(query)(self, r, ec)
@@ -52,17 +52,16 @@ trait BucketAPI {
 
   /**
    *
+   * Poll query every n millisec
    *
-   *
-   * @param doc
-   * @param view
-   * @param query
-   * @param everyMillis
-   * @param filter
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param doc the name of the design doc
+   * @param view the view to query
+   * @param query the actual query
+   * @param everyMillis repeat every ...
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the query enumerator
    */
   def pollQuery[T](doc: String, view: String, query: Query, everyMillis: Long, filter: T => Boolean = { chunk: T => true })(implicit r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Couchbase.pollQuery[T](doc, view, query, everyMillis, filter)(self, r, ec)
@@ -70,17 +69,16 @@ trait BucketAPI {
 
   /**
    *
+   * Repeat query
    *
-   *
-   * @param doc
-   * @param view
-   * @param query
-   * @param filter
-   * @param trigger
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param doc the name of the design doc
+   * @param view the view to query
+   * @param query the actual query
+   * @param filter the filter for documents selection
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the query enumerator
    */
   def repeatQuery[T](doc: String, view: String, query: Query, filter: T => Boolean = { chunk: T => true }, trigger: Future[AnyRef] = Future.successful(Some))(implicit r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Couchbase.repeatQuery[T](doc, view, query, trigger, filter)(self, r, ec)
@@ -88,18 +86,18 @@ trait BucketAPI {
 
   /**
    *
+   * 'Tail -f' on a query
    *
-   *
-   * @param doc
-   * @param view
-   * @param extractor
-   * @param from
-   * @param every
-   * @param unit
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param doc the name of the design doc
+   * @param view the view to query
+   * @param extractor id extrator of natural insertion order
+   * @param from start from id
+   * @param every tail every
+   * @param unit unit of time
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the query enumerator
    */
   def tailableQuery[T](doc: String, view: String, extractor: T => Long, from: Long = 0L, every: Long = 1000L, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Couchbase.tailableQuery[T](doc, view, extractor, from, every, unit)(self, r, ec)
@@ -107,160 +105,161 @@ trait BucketAPI {
 
   /**
    *
+   * Fetch a stream of documents
    *
-   *
-   * @param keysEnumerator
-   * @param ec
+   * @param keysEnumerator stream of keys
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def rawFetch(keysEnumerator: Enumerator[String])(implicit ec: ExecutionContext): QueryEnumerator[(String, String)] = Couchbase.rawFetch(keysEnumerator)(this, ec)
 
   /**
    *
+   * Fetch a stream of documents
    *
-   *
-   * @param keysEnumerator
-   * @param r
-   * @param ec
-   * @tparam T
+   * @param keysEnumerator stream of keys
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
    * @return
    */
   def fetch[T](keysEnumerator: Enumerator[String])(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[(String, T)] = Couchbase.fetch[T](keysEnumerator)(this, r, ec)
 
   /**
    *
+   * Fetch a stream of documents
    *
-   *
-   * @param keysEnumerator
-   * @param r
-   * @param ec
-   * @tparam T
+   * @param keysEnumerator stream of keys
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
    * @return
    */
   def fetchValues[T](keysEnumerator: Enumerator[String])(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = Couchbase.fetchValues[T](keysEnumerator)(this, r, ec)
 
   /**
    *
+   * Fetch a stream of documents
    *
-   *
-   * @param keys
-   * @param r
-   * @param ec
-   * @tparam T
+   * @param keys the key of the documents
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
    * @return
    */
   def fetch[T](keys: Seq[String])(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[(String, T)] = Couchbase.fetch[T](keys)(this, r, ec)
 
+
   /**
    *
+   * Fetch a stream of documents
    *
-   *
-   * @param keys
-   * @param r
-   * @param ec
-   * @tparam T
+   * @param keys the key of the documents
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
    * @return
    */
   def fetchValues[T](keys: Seq[String])(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = Couchbase.fetchValues[T](keys)(this, r, ec)
 
   /**
    *
+   * Fetch a optional document and its key
    *
-   *
-   * @param key
-   * @param r
-   * @param ec
-   * @tparam T
+   * @param key the key of the document
+   * @param r Json reader
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
    * @return
    */
   def getWithKey[T](key: String)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[(String, T)]] = Couchbase.getWithKey[T](key)(this, r, ec)
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param docName
-   * @param viewName
-   * @param query
-   * @param ec
-   * @return
+   * @param docName the name of the design doc
+   * @param viewName the name of the view
+   * @param query the actual query
+   * @param ec ExecutionContext for async processing
+   * @return the query enumerator
    */
   def rawSearch(docName: String, viewName: String)(query: Query)(implicit ec: ExecutionContext): QueryEnumerator[RawRow] = Couchbase.rawSearch(docName, viewName)(query)(this, ec)
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param view
-   * @param query
-   * @param ec
-   * @return
+   * @param view the view to query
+   * @param query the actual query
+   * @param ec ExecutionContext for async processing
+   * @return the query enumerator
    */
   def rawSearch(view: View)(query: Query)(implicit ec: ExecutionContext): QueryEnumerator[RawRow] = Couchbase.rawSearch(view)(query)(this, ec)
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param docName
-   * @param viewName
-   * @param query
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param docName the name of the design doc
+   * @param viewName the name of the view
+   * @param query the actual query
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the query enumerator
    */
   def search[T](docName: String, viewName: String)(query: Query)(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = Couchbase.search[T](docName, viewName)(query)(this, r, ec)
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param view
-   * @param query
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param view the view to query
+   * @param query the actual query
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the query enumerator
    */
   def search[T](view: View)(query: Query)(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = Couchbase.search[T](view)(query)(this, r, ec)
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param docName
-   * @param viewName
-   * @param query
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param docName the name of the design doc
+   * @param viewName the name of the view
+   * @param query the actual query
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the query enumerator
    */
   def searchValues[T](docName: String, viewName: String)(query: Query)(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = Couchbase.searchValues[T](docName, viewName)(query)(this, r, ec)
 
   /**
    *
+   * Perform a Couchbase query on a view
    *
-   *
-   * @param view
-   * @param query
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param view the view to query
+   * @param query the actual query
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the query enumerator
    */
   def searchValues[T](view: View)(query: Query)(implicit r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = Couchbase.searchValues[T](view)(query)(this, r, ec)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /**
    *
+   * Fetch a view
    *
-   *
-   * @param docName
-   * @param viewName
-   * @param ec
-   * @return
+   * @param docName the name of the design doc
+   * @param viewName the name of the view
+   * @param ec ExecutionContext for async processing
+   * @return the view
    */
   def view(docName: String, viewName: String)(implicit ec: ExecutionContext): Future[View] = {
     Couchbase.view(docName, viewName)(self, ec)
@@ -268,12 +267,12 @@ trait BucketAPI {
 
   /**
    *
+   * Fetch a spatial view
    *
-   *
-   * @param docName
-   * @param viewName
-   * @param ec
-   * @return
+   * @param docName the name of the design doc
+   * @param viewName the name of the view
+   * @param ec ExecutionContext for async processing
+   * @return the spatial view
    */
   def spatialView(docName: String, viewName: String)(implicit ec: ExecutionContext): Future[SpatialView] = {
     Couchbase.spatialView(docName, viewName)(self, ec)
@@ -281,11 +280,11 @@ trait BucketAPI {
 
   /**
    *
+   * Fetch a design document
    *
-   *
-   * @param docName
-   * @param ec
-   * @return
+   * @param docName the name of the design doc
+   * @param ec ExecutionContext for async processing
+   * @return fetch design doc
    */
   def designDocument(docName: String)(implicit ec: ExecutionContext): Future[DesignDocument] = {
     Couchbase.designDocument(docName)(self, ec)
@@ -293,12 +292,12 @@ trait BucketAPI {
 
   /**
    *
+   * Create a design doc
    *
-   *
-   * @param name
-   * @param value
-   * @param ec
-   * @return
+   * @param name name of the design doc
+   * @param value the content of the design doc
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
    */
   def createDesignDoc(name: String, value: JsObject)(implicit ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.createDesignDoc(name, value)(self, ec)
@@ -306,12 +305,12 @@ trait BucketAPI {
 
   /**
    *
+   * Create a design doc
    *
-   *
-   * @param name
-   * @param value
-   * @param ec
-   * @return
+   * @param name name of the design doc
+   * @param value the content of the design doc
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
    */
   def createDesignDoc(name: String, value: String)(implicit ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.createDesignDoc(name, value)(self, ec)
@@ -319,16 +318,24 @@ trait BucketAPI {
 
   /**
    *
+   * Create a design doc
    *
-   *
-   * @param value
-   * @param ec
-   * @return
+   * @param value the content of the design doc
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
    */
   def createDesignDoc(value: DesignDocument)(implicit ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.createDesignDoc(value)(self, ec)
   }
 
+  /**
+   *
+   * Delete a design doc
+   *
+   * @param name name of the design doc
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
+   */
   def deleteDesignDoc(name: String)(implicit ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.deleteDesignDoc(name)(self, ec)
   }
@@ -338,7 +345,6 @@ trait BucketAPI {
    * Fetch keys stats
    *
    * @param key the key of the document
-
    * @param ec ExecutionContext for async processing
    * @return
    */
@@ -380,7 +386,6 @@ trait BucketAPI {
    *
    * @param key key of the Int value
    * @param by increment of the value
-
    * @param ec ExecutionContext for async processing
    * @return
    */
@@ -392,7 +397,6 @@ trait BucketAPI {
    *
    * @param key key of the Long value
    * @param by the value to increment
-
    * @param ec ExecutionContext for async processing
    * @return
    */
@@ -404,7 +408,6 @@ trait BucketAPI {
    *
    * @param key key of the Int value
    * @param by the value to decrement
-
    * @param ec ExecutionContext for async processing
    * @return
    */
