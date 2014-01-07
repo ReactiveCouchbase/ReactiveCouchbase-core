@@ -8,6 +8,9 @@ import play.api.libs.iteratee.{Enumeratee, Iteratee, Enumerator}
 import play.api.libs.json._
 import collection.JavaConversions._
 
+/**
+ * Trait for read operations
+ */
 trait Read {
 
   def keyStats(key: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Map[String, String]] = {

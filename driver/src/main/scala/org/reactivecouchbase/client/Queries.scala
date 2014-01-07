@@ -26,6 +26,13 @@ case class TypedRow[T](document: T, id: Option[String], key: String, value: Stri
   def toTuple = (document, id, key, value)
 }
 
+/**
+ *
+ * Reactive representation of a query result
+ *
+ * @param futureEnumerator doc stream
+ * @tparam T type of doc
+ */
 class QueryEnumerator[T](futureEnumerator: Future[Enumerator[T]]) {
   def enumerate: Future[Enumerator[T]] = futureEnumerator
   def enumerated(implicit ec: ExecutionContext): Enumerator[T] =
@@ -42,6 +49,9 @@ object QueryEnumerator {
   def apply[T](enumerate: Future[Enumerator[T]]): QueryEnumerator[T] = new QueryEnumerator[T](enumerate)
 }
 
+/**
+ * Trait to query Couchbase
+ */
 trait Queries {
 
   def docName(name: String) = {

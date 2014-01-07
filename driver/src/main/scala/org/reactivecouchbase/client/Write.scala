@@ -10,7 +10,9 @@ import org.reactivecouchbase.client.CouchbaseFutures._
 import play.api.libs.iteratee.{Iteratee, Enumerator}
 import org.reactivecouchbase.CouchbaseExpiration._
 
-
+/**
+ * Trait for write operations
+ */
 trait Write {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,14 +107,27 @@ trait Write {
     }).flatMap(_.run).flatMap(Future.sequence(_))
   }
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Flush Operations
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+  /**
+   *
+   * Flush the current bucket
+   *
+   * @param delay delay to flush
+   * @param bucket the current bucket
+   * @param ec ExecutionContext for async processing
+   * @return the operations tatus
+   */
   def flush(delay: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus( bucket.couchbaseClient.flush(delay), bucket, ec )
   }
 
+  /**
+   *
+   * Flush the current bucket
+   *
+   * @param bucket the current bucket
+   * @param ec ExecutionContext for async processing
+   * @return the operations tatus
+   */
   def flush()(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     flush(Constants.expiration)(bucket, ec)
   }

@@ -12,6 +12,9 @@ import java.util.concurrent.TimeUnit
 import net.spy.memcached.CASValue
 import org.reactivecouchbase.CouchbaseExpiration._
 
+/**
+ * Trait containing the whole ReactiveCouchbase API to put on CouchbaseBucket
+ */
 trait BucketAPI {
   self: CouchbaseBucket =>
 

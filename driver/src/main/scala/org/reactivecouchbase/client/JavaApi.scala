@@ -8,6 +8,9 @@ import org.reactivecouchbase.client.CouchbaseFutures._
 import com.couchbase.client.protocol.views._
 import scala.collection.JavaConversions._
 
+/**
+ * Trait for Java API (for Play framework usage)
+ */
 trait JavaApi { self: Queries =>
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

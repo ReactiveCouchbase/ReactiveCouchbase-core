@@ -120,6 +120,9 @@ private[reactivecouchbase] class AtomicActor[T] extends Actor {
   }
 }
 
+/**
+ * Trait for Atomic updates
+ */
 trait Atomic {
 
   def getAndLock[T](key: String, exp: CouchbaseExpirationTiming)(implicit r: Reads[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[Option[CASValue[T]]] = {
