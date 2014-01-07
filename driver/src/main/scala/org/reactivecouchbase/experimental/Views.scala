@@ -6,7 +6,7 @@ import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.{Promise, Future, ExecutionContext}
 import play.api.libs.json._
 import play.api.libs.iteratee.{Enumeratee, Enumerator}
-import org.reactivecouchbase.client.{RawRow, QueryEnumerator}
+import org.reactivecouchbase.client.{ReactiveCouchbaseException, RawRow, QueryEnumerator}
 
 /**
  *
@@ -77,7 +77,7 @@ object Views {
     bucket.httpClient.prepareGet(url).execute(new AsyncCompletionHandler[Response]() {
       override def onCompleted(response: Response) = {
         if (response.getStatusCode != 200) {
-          promise.failure(new RuntimeException(s"Couchbase responded with status '${response.getStatusCode}' : ${response.getResponseBody}"))
+          promise.failure(new ReactiveCouchbaseException("Error", s"Couchbase responded with status '${response.getStatusCode}' : ${response.getResponseBody}"))
         } else {
           promise.success(response.getResponseBody)
         }

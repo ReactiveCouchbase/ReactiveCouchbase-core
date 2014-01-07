@@ -6,7 +6,7 @@ import scala.concurrent.{Future, ExecutionContext}
 import java.util.UUID
 import com.couchbase.client.protocol.views.{Query, View}
 import play.api.libs.iteratee.{Enumeratee, Iteratee, Enumerator}
-import org.reactivecouchbase.client.TypedRow
+import org.reactivecouchbase.client.{ReactiveCouchbaseException, TypedRow}
 
 trait ReactiveCRUD[T] {
 
@@ -31,7 +31,7 @@ trait ReactiveCRUD[T] {
       case actualId: JsString => {
         bucket.set(actualId.value, json)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(_ => actualId.value)(ctx)
       }
-      case _ => throw new RuntimeException(s"Field with $idKey already exists and not of type JsString")
+      case _ => throw new ReactiveCouchbaseException("Error", s"Field with $idKey already exists and not of type JsString")
     }
   }
 
@@ -53,7 +53,7 @@ trait ReactiveCRUD[T] {
         val json = Json.toJson(t._1)(format).as[JsObject]
         val newJson = json.deepMerge(upd)
         bucket.replace((json \ idKey).as[JsString].value, newJson)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(_ => ())
-      }.getOrElse(throw new RuntimeException(s"Cannot find id $id"))
+      }.getOrElse(throw new ReactiveCouchbaseException("Error", s"Cannot find id $id"))
     }
   }
 
@@ -68,7 +68,7 @@ trait ReactiveCRUD[T] {
     bucket.search[JsObject](sel._1)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toList(ctx).map { l =>
       l.map { i =>
         val t = format.reads(i.document) match {
-          case e:JsError => throw new RuntimeException("Document does not match object")
+          case e:JsError => throw new ReactiveCouchbaseException("Error", "Document does not match object")
           case s:JsSuccess[T] => s.get
         }
         i.document \ idKey match {
@@ -86,7 +86,7 @@ trait ReactiveCRUD[T] {
       val size = if(pageSize != 0) pageSize else l.size
       Enumerator.enumerate(l.map { i =>
         val t = format.reads(i.document) match {
-          case e:JsError => throw new RuntimeException("Document does not match object")
+          case e:JsError => throw new ReactiveCouchbaseException("Error", "Document does not match object")
           case s:JsSuccess[T] => s.get
         }
         i.document \ idKey match {

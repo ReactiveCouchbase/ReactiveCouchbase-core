@@ -147,7 +147,7 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
    * Config for each bucket
    */
   val bucketsConfig: Map[String, Config] = config.getObjectList("couchbase.buckets")
-    .getOrElse(throw new RuntimeException("Can't find any bucket in conf !!!"))
+    .getOrElse(throw new ReactiveCouchbaseException("No configuration", "Can't find any bucket in conf !!!"))
     .map(_.toConfig)
     .map(b => (b.getString("bucket"), b))
     .toMap
@@ -186,7 +186,7 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
 
   def bucket(name: String): CouchbaseBucket = {
     if (!buckets.containsKey(name)) {
-      val cfg = new Configuration(bucketsConfig.get(name).getOrElse(throw new RuntimeException(s"Cannot find bucket $name")))
+      val cfg = new Configuration(bucketsConfig.get(name).getOrElse(throw new ReactiveCouchbaseException("No bucket", s"Cannot find bucket $name")))
       val hosts: List[String] = cfg.getString("host").map(_.replace(" ", "")).map(_.split(",").toList).getOrElse(List("127.0.0.1"))
       val port: String =        cfg.getString("port").getOrElse("8091")
       val base: String =        cfg.getString("base").getOrElse("pools")
