@@ -145,6 +145,24 @@ object CouchbaseN1QL {
    *
    * Creates a N1QL query
    *
+   * Example :
+   * {{{
+   *   import scala.concurrent.ExecutionContext.Implicits.global
+   *
+   *   case class Person(name: String, age: Int)
+   *
+   *   val driver = ReactiveCouchbaseDriver()
+   *   implicit val bucket = driver.bucket("default")
+   *   implicit val fmt = Json.format[Person]
+   *
+   *   val age = 42
+   *
+   *   N1QL( s""" SELECT fname, age FROM tutorial WHERE age > ${age} """, driver )
+   *                                                .toList[Person].map { persons =>
+   *     println(s"Persons older than ${age}", persons))
+   *   }
+   * }}}
+   *
    * @param query the actual N1QL query written in N1QL query language
    * @param bucket the targeted bucket
    * @return the created N1QLQuery instance

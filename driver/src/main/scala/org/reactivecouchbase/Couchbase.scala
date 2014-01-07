@@ -135,6 +135,14 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
 
 /**
  * Driver to access a Couchbase server
+ *
+ *
+ * Example :
+ * {{{
+ *   val driver = ReactiveCouchbaseDriver()
+ *   val bucket = driver.bucket("default")
+ *   val capped = driver.cappedBucket("default", 100, true)
+ * }}}
  */
 class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike) {
 

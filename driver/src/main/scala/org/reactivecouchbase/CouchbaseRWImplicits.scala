@@ -8,6 +8,7 @@ import play.api.libs.json.JsObject
  * A bunch of implicit Json readers and writers to deal with json docs as string and
  * json docs as JsValue or JsObject. Very useful to deal with 'raw' types
  *
+ * Example :
  * {{{
  * import org.reactivecouchbase.CouchbaseRWImplicits._
  * }}}
