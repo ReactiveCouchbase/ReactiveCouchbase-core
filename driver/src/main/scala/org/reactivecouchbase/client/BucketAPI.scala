@@ -5,12 +5,13 @@ import scala.concurrent.{ Future, ExecutionContext }
 import com.couchbase.client.protocol.views.{ DesignDocument, SpatialView, View, Query }
 import play.api.libs.iteratee.Enumerator
 import net.spy.memcached.ops.OperationStatus
-import play.api.libs.json.JsObject
 import net.spy.memcached.{ PersistTo, ReplicateTo }
 import org.reactivecouchbase.{ Couchbase, CouchbaseBucket }
 import java.util.concurrent.TimeUnit
 import net.spy.memcached.CASValue
 import org.reactivecouchbase.CouchbaseExpiration._
+import scala.Some
+import play.api.libs.json.JsObject
 
 /**
  * Trait containing the whole ReactiveCouchbase API to put on CouchbaseBucket
@@ -334,10 +335,11 @@ trait BucketAPI {
 
   /**
    *
+   * Fetch keys stats
    *
-   *
-   * @param key
-   * @param ec
+   * @param key the key of the document
+
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def keyStats(key: String)(implicit ec: ExecutionContext): Future[Map[String, String]] = {
@@ -346,12 +348,11 @@ trait BucketAPI {
 
   /**
    *
+   * fetch a document
    *
-   *
-   * @param key
-   * @param r
-   * @param ec
-   * @tparam T
+   * @param key the key of the document
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
    * @return
    */
   def get[T](key: String)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
@@ -375,88 +376,91 @@ trait BucketAPI {
 
   /**
    *
+   * Increment an Int
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Int value
+   * @param by increment of the value
+
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def incr(key: String, by: Int)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.incr(key, by)(self, ec)
 
   /**
    *
+   * Increment a Long
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Long value
+   * @param by the value to increment
+
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def incr(key: String, by: Long)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.incr(key, by)(self, ec)
 
   /**
    *
+   * Decrement an Int
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Int value
+   * @param by the value to decrement
+
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def decr(key: String, by: Int)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.decr(key, by)(self, ec)
 
   /**
    *
+   * Decrement a Long
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Long value
+   * @param by the value to decrement
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def decr(key: String, by: Long)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.decr(key, by)(self, ec)
 
   /**
    *
+   * Increment and get an Int
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Int value
+   * @param by the value to increment
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def incrAndGet(key: String, by: Int)(implicit ec: ExecutionContext): Future[Int] = Couchbase.incrAndGet(key, by)(self, ec)
 
   /**
    *
+   * Increment and get a Long
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Long value
+   * @param by the value to increment
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def incrAndGet(key: String, by: Long)(implicit ec: ExecutionContext): Future[Long] = Couchbase.incrAndGet(key, by)(self, ec)
 
   /**
    *
+   * Decrement and get an Int
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Int value
+   * @param by the value to decrement
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def decrAndGet(key: String, by: Int)(implicit ec: ExecutionContext): Future[Int] = Couchbase.decrAndGet(key, by)(self, ec)
 
   /**
    *
+   * Decrement and get a Long
    *
-   *
-   * @param key
-   * @param by
-   * @param ec
+   * @param key key of the Long value
+   * @param by the value to decrement
+   * @param ec ExecutionContext for async processing
    * @return
    */
   def decrAndGet(key: String, by: Long)(implicit ec: ExecutionContext): Future[Long] = Couchbase.decrAndGet(key, by)(self, ec)
@@ -479,17 +483,13 @@ trait BucketAPI {
 
   /**
    *
+   * Set a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def set[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.set[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -497,17 +497,17 @@ trait BucketAPI {
 
   /**
    *
+   * Set a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.setWithKey[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -515,16 +515,16 @@ trait BucketAPI {
 
   /**
    *
+   * Set a document that contains an id field
    *
-   *
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.set[T](value.id, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -532,16 +532,17 @@ trait BucketAPI {
 
   /**
    *
+   * Set a stream of documents
    *
-   *
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.setStream[T](data, exp, persistTo, replicateTo)(self, w, ec)
@@ -549,17 +550,17 @@ trait BucketAPI {
 
   /**
    *
+   * Set a stream of documents
    *
-   *
-   * @param key
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def setStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.setStreamWithKey[T](key, data, exp, persistTo, replicateTo)(self, w, ec)
@@ -583,17 +584,17 @@ trait BucketAPI {
 
   /**
    *
+   * Add a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def add[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.add[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -601,17 +602,17 @@ trait BucketAPI {
 
   /**
    *
+   * Add a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.addWithKey[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -619,16 +620,16 @@ trait BucketAPI {
 
   /**
    *
+   * Add a document
    *
-   *
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.add[T](value.id, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -636,16 +637,16 @@ trait BucketAPI {
 
   /**
    *
+   * Add a stream of documents
    *
-   *
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.addStream[T](data, exp, persistTo, replicateTo)(self, w, ec)
@@ -653,17 +654,17 @@ trait BucketAPI {
 
   /**
    *
+   * Add a stream of documents
    *
-   *
-   * @param key
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def addStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.addStreamWithKey[T](key, data, exp, persistTo, replicateTo)(self, w, ec)
@@ -687,17 +688,17 @@ trait BucketAPI {
 
   /**
    *
+   * Replace a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replace[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.replace[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -705,17 +706,17 @@ trait BucketAPI {
 
   /**
    *
+   * Replace a document
    *
-   *
-   * @param key
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.replaceWithKey[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -723,16 +724,16 @@ trait BucketAPI {
 
   /**
    *
+   * Replace a document
    *
-   *
-   * @param value
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param value the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.replace[T](value.id, value, exp, persistTo, replicateTo)(self, w, ec)
@@ -740,16 +741,16 @@ trait BucketAPI {
 
   /**
    *
+   * Replace a stream documents
    *
-   *
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.replaceStream[T](data, exp, persistTo, replicateTo)(self, w, ec)
@@ -757,17 +758,17 @@ trait BucketAPI {
 
   /**
    *
+   * Replace a stream documents
    *
-   *
-   * @param key
-   * @param data
-   * @param exp
-   * @param persistTo
-   * @param replicateTo
-   * @param w
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param data the stream of documents
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T the type of the doc
+   * @return the operation status
    */
   def replaceStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.replaceStreamWithKey[T](key, data, exp, persistTo, replicateTo)(self, w, ec)
@@ -775,13 +776,13 @@ trait BucketAPI {
 
   /**
    *
+   * Delete a document
    *
-   *
-   * @param key
-   * @param persistTo
-   * @param replicateTo
-   * @param ec
-   * @return
+   * @param key the key to delete
+   * @param persistTo persist flag
+   * @param replicateTo repplication flag
+   * @param ec ExecutionContext for async processing
+   * @return the operation status for the delete operation
    */
   def delete(key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.delete(key, persistTo, replicateTo)(self, ec)
@@ -789,14 +790,14 @@ trait BucketAPI {
 
   /**
    *
-   *
+   * Delete a document with an id field of type String
    *
    * @param value
-   * @param persistTo
-   * @param replicateTo
-   * @param ec
-   * @tparam T
-   * @return
+   * @param persistTo persist flag
+   * @param replicateTo repplication flag
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of documents
+   * @return the operation status for the delete operation
    */
   def deleteWithId[T <: { def id: String }](value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[OperationStatus] = {
     Couchbase.delete(value.id, persistTo, replicateTo)(self, ec)
@@ -804,13 +805,13 @@ trait BucketAPI {
 
   /**
    *
+   * Delete a stream of documents
    *
-   *
-   * @param data
-   * @param persistTo
-   * @param replicateTo
-   * @param ec
-   * @return
+   * @param data the stream of documents to delete
+   * @param persistTo persist flag
+   * @param replicateTo repplication flag
+   * @param ec ExecutionContext for async processing
+   * @return the operation statuses for the delete operation
    */
   def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.deleteStream(data, persistTo, replicateTo)(self, ec)
@@ -818,15 +819,15 @@ trait BucketAPI {
 
   /**
    *
+   * Delete a stream of documents
    *
-   *
-   * @param key
-   * @param data
-   * @param persistTo
-   * @param replicateTo
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key the extractor to get the key
+   * @param data the stream of documents to delete
+   * @param persistTo persist flag
+   * @param replicateTo repplication flag
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of document
+   * @return the operation statuses for the delete operation
    */
   def deleteStreamWithKey[T](key: T => String, data: Enumerator[T], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OperationStatus]] = {
     Couchbase.deleteStreamWithKey[T](key, data, persistTo, replicateTo)(self, ec)
@@ -834,33 +835,33 @@ trait BucketAPI {
 
   /**
    *
+   * Flush the current bucket
    *
-   *
-   * @param delay
-   * @param ec
-   * @return
+   * @param delay delay to flush
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
    */
   def flush(delay: Int)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.flush(delay)(self, ec)
 
   /**
    *
+   * Flush the current bucket
    *
-   *
-   * @param ec
-   * @return
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
    */
   def flush()(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.flush()(self, ec)
 
   /**
    *
+   * Get a doc and lock it
    *
-   *
-   * @param key
-   * @param exp
-   * @param r
-   * @param ec
-   * @tparam T
-   * @return
+   * @param key key of the lock
+   * @param exp expiration of the lock
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return Cas value
    */
   def getAndLock[T](key: String, exp: CouchbaseExpirationTiming)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[CASValue[T]]] = {
     Couchbase.getAndLock(key, exp)(r, self, ec)
@@ -868,15 +869,28 @@ trait BucketAPI {
 
   /**
    *
+   * Unlock a locked key
    *
+   * @param key key to unlock
+   * @param casId id of the compare and swap operation
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
+   */
+  def unlock(key: String, casId: Long)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+    Couchbase.unlock(key, casId)(self, ec)
+  }
+
+  /**
    *
-   * @param key
-   * @param operation
-   * @param ec
-   * @param r
-   * @param w
-   * @tparam T
-   * @return
+   * Atomically perform operation(s) on a document while it's locked
+   *
+   * @param key the key of the document
+   * @param operation the operation(s) to perform on the document while it's locked
+   * @param ec ExecutionContext for async processing
+   * @param r Json reader
+   * @param w Json writer
+   * @tparam T type of the doc
+   * @return the document
    */
   def atomicUpdate[T](key: String, operation: T => T)(implicit ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     Couchbase.atomicUpdate[T](key, operation)(self, ec, r, w)
@@ -884,15 +898,15 @@ trait BucketAPI {
 
   /**
    *
+   * Atomically perform async operation(s) on a document while it's locked
    *
-   *
-   * @param key
-   * @param operation
-   * @param ec
-   * @param r
-   * @param w
-   * @tparam T
-   * @return
+   * @param key the key of the document
+   * @param operation the async operation(s) to perform on the document while it's locked
+   * @param ec ExecutionContext for async processing
+   * @param r Json reader
+   * @param w Json writer
+   * @tparam T type of the doc
+   * @return the document
    */
   def atomicallyUpdate[T](key: String)(operation: T => Future[T])(implicit ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     Couchbase.atomicallyUpdate[T](key)(operation)(self, ec, r, w)

@@ -16,12 +16,12 @@ import org.reactivecouchbase.experimental.Views
 
 /**
  *
+ * Raw row query result
  *
- *
- * @param document
- * @param id
- * @param key
- * @param value
+ * @param document the document
+ * @param id the documents key
+ * @param key the documents indexed key
+ * @param value the documents indexed value
  */
 case class RawRow(document: Option[String], id: Option[String], key: String, value: String) {
   def toTuple = (document, id, key, value)
@@ -29,13 +29,13 @@ case class RawRow(document: Option[String], id: Option[String], key: String, val
 
 /**
  *
+ * Js row query result
  *
- *
- * @param document
- * @param id
- * @param key
- * @param value
- * @tparam T
+ * @param document the document
+ * @param id the documents key
+ * @param key the documents indexed key
+ * @param value the documents indexed value
+ * @tparam T the type of the doc
  */
 case class JsRow[T](document: JsResult[T], id: Option[String], key: String, value: String) {
   def toTuple = (document, id, key, value)
@@ -43,13 +43,13 @@ case class JsRow[T](document: JsResult[T], id: Option[String], key: String, valu
 
 /**
  *
+ * Typed row query result
  *
- *
- * @param document
- * @param id
- * @param key
- * @param value
- * @tparam T
+ * @param document the document
+ * @param id the documents key
+ * @param key the documents indexed key
+ * @param value the documents indexed value
+ * @tparam T the type of the doc
  */
 case class TypedRow[T](document: T, id: Option[String], key: String, value: String) {
   def toTuple = (document, id, key, value)
@@ -63,10 +63,19 @@ case class TypedRow[T](document: T, id: Option[String], key: String, value: Stri
  * @tparam T type of doc
  */
 class QueryEnumerator[T](futureEnumerator: Future[Enumerator[T]]) {
+
+  /**
+   * @return the enumerator for query results
+   */
   def enumerate: Future[Enumerator[T]] = futureEnumerator
   def enumerated(implicit ec: ExecutionContext): Enumerator[T] =
     Concurrent.unicast[T](onStart = c => futureEnumerator.map(_(Iteratee.foreach[T](c.push).map(_ => c.eofAndEnd()))))
 
+  /**
+   *
+   * @param ec
+   * @return
+   */
   def toList(implicit ec: ExecutionContext): Future[List[T]] =
     futureEnumerator.flatMap(_(Iteratee.getChunks[T]).flatMap(_.run))
 
