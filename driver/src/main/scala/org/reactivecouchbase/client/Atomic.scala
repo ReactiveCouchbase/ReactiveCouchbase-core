@@ -1,6 +1,6 @@
 package org.reactivecouchbase.client
 
-import org.reactivecouchbase.{LoggerLike, StandaloneLogger, CouchbaseBucket}
+import org.reactivecouchbase.{LoggerLike, CouchbaseBucket}
 import scala.concurrent.{ Future, ExecutionContext }
 import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
@@ -125,6 +125,18 @@ private[reactivecouchbase] class AtomicActor[T] extends Actor {
  */
 trait Atomic {
 
+  /**
+   *
+   * Get a doc and lock it
+   *
+   * @param key key of the lock
+   * @param exp expiration of the lock
+   * @param r Json reader for type T
+   * @param bucket the bucket used
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return Cas value
+   */
   def getAndLock[T](key: String, exp: CouchbaseExpirationTiming)(implicit r: Reads[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[Option[CASValue[T]]] = {
     waitForGetAndCas[T](bucket.couchbaseClient.asyncGetAndLock(key, exp), bucket, ec, r) map {
       case value: CASValue[T] =>
@@ -133,10 +145,33 @@ trait Atomic {
     }
   }
 
+  /**
+   *
+   * Unlock a locked key
+   *
+   * @param key key to unlock
+   * @param casId id of the compare and swap operation
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
+   */
   def unlock(key: String, casId: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForOperationStatus(bucket.couchbaseClient.asyncUnlock(key, casId), bucket, ec)
   }
 
+  /**
+   *
+   * Atomically perform async operation(s) on a document while it's locked
+   *
+   * @param key the key of the document
+   * @param operation the async operation(s) to perform on the document while it's locked
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @param r Json reader
+   * @param w Json writer
+   * @tparam T type of the doc
+   * @return the document
+   */
   def atomicallyUpdate[T](key: String)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     implicit val timeout = Timeout(8 minutes)
     val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1)
@@ -145,6 +180,19 @@ trait Atomic {
     (atomic_actor.ask(ar)).map(_.asInstanceOf[T]) // I know it's ugly
   }
 
+  /**
+   *
+   * Atomically perform operation(s) on a document while it's locked
+   *
+   * @param key the key of the document
+   * @param operation the operation(s) to perform on the document while it's locked
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @param r Json reader
+   * @param w Json writer
+   * @tparam T type of the doc
+   * @return the document
+   */
   def atomicUpdate[T](key: String, operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     atomicallyUpdate(key)((arg: T) => Future(operation(arg)))(bucket, ec, r, w) 
   }
