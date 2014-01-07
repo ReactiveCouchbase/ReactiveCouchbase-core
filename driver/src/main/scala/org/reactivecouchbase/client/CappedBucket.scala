@@ -30,6 +30,16 @@ object CappedBucket {
       }
     """
 
+  /**
+   *
+   * Build a Capped Bucket from a bucket
+   *
+   * @param bucket the bucket to use the bucket to transform in capped bucket
+   * @param ec ExecutionContext for async processing ExecutionContext for async processing
+   * @param max max elements in the capped bucket
+   * @param r Json reader for type Teaper trigger reaper to kill elements after max
+   * @return the capped bucket
+   */
   def apply(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = true) = {
     if (!buckets.containsKey(bucket.bucket)) {
       buckets.putIfAbsent(bucket.bucket, new CappedBucket(bucket, ec, max, reaper))
@@ -60,21 +70,61 @@ object CappedBucket {
   }
 }
 
+/**
+ *
+ * Represent a Capped bucket (capped is handle in the driver, not on the server side)
+ *
+ * @param bucket the bucket to use the bucket to use
+ * @param ec ExecutionContext for async processing 
+ * @param max max elements in the bucket
+ * @param reaper enable reaper to remove old elements
+ */
 class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = true) {
 
   if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, ec)
   if (reaper) CappedBucket.enabledReaper(bucket, max, ec)
 
-  def oldestOption[T](key: String)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
+  /**
+   *
+   * Retrieve the oldest document from the capped bucket
+   *
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
+  def oldestOption[T](implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(false).setLimit(1)
     CappedBucket.trigger.flatMap(_ => Couchbase.find[T](CappedBucket.docName, CappedBucket.viewName)(query)(bucket, r, ec).map(_.headOption))
   }
 
-  def lastInsertedOption[T](key: String)(implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
+  /**
+   *
+   * Retrieve the last inserted document from the capped bucket
+   *
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
+  def lastInsertedOption[T](implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(true).setLimit(1)
     CappedBucket.trigger.flatMap(_ => Couchbase.find[T](CappedBucket.docName, CappedBucket.viewName)(query)(bucket, r, ec).map(_.headOption))
   }
 
+  /**
+   *
+   * Retrieve an infinite stream of data from a capped bucket. Each time a document is inserted in the bucket, doc
+   * document is pushed in the stream.
+   *
+   * @param from natural insertion id to retrieve from
+   * @param every retrieve new doc every
+   * @param unit time unit
+   * @param r Json reader for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def tail[T](from: Long = 0L, every: Long = 1000L, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit r: Reads[T], ec: ExecutionContext): Future[Enumerator[T]] = {
     CappedBucket.trigger.map( _ => Couchbase.tailableQuery[JsObject](CappedBucket.docName, CappedBucket.viewName, { obj =>
       (obj \ CappedBucket.cappedNaturalId).as[Long]
@@ -85,18 +135,59 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
     }))
   }
 
+  /**
+   *
+   * Insert document into the capped bucket
+   *
+   * @param key the key of the inserted doc
+   * @param value the doc to insert
+   * @param exp expiration of data
+   * @param persistTo persistance flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def insert[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     val jsObj = w.writes(value).as[JsObject]
     val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
     CappedBucket.trigger.flatMap(_ => Couchbase.set[JsObject](key, enhancedJsObj, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
   }
 
+  /**
+   *
+   * Insert a document into the capped bucket
+   *
+   * @param key the key of the inserted doc
+   * @param value the doc to insert
+   * @param exp expiration of data
+   * @param persistTo persistance flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def insertWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
     val jsObj = w.writes(value).as[JsObject]
     val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
     CappedBucket.trigger.flatMap(_ => Couchbase.setWithKey[JsObject]({ _ => key(value)}, enhancedJsObj, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
   }
 
+  /**
+   *
+   * Insert a stream of data into the capped bucket
+   *
+   * @param data stream of data
+   * @param exp expiration of data to insert
+   * @param persistTo persistance flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def insertStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     val enhancedEnumerator = data.through(Enumeratee.map { elem =>
       val jsObj = w.writes(elem._2).as[JsObject]
@@ -106,6 +197,20 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
     CappedBucket.trigger.flatMap(_ => Couchbase.setStream[JsObject](enhancedEnumerator, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
   }
 
+  /**
+   *
+   * Insert a stream of data into the capped bucket
+   *
+   * @param key the key extractor
+   * @param data stream of data to insert
+   * @param exp expiration of data
+   * @param persistTo persistance flag
+   * @param replicateTo replication flag
+   * @param w Json writer for type T
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return
+   */
   def insertStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
     val enhancedEnumerator = data.through(Enumeratee.map { elem =>
       val jsObj = w.writes(elem).as[JsObject]

@@ -13,6 +13,15 @@ import org.reactivecouchbase.CouchbaseBucket
  */
 private[reactivecouchbase] object CouchbaseFutures {
 
+  /**
+   *
+   * Transform an BulkFuture to a Future[Map]
+   *
+   * @param future the Java Driver Future
+   * @param b the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return
+   */
   def waitForBulkRaw(future: BulkFuture[java.util.Map[String, AnyRef]], b: CouchbaseBucket, ec : ExecutionContext): Future[java.util.Map[String, AnyRef]] = {
     val promise = Promise[java.util.Map[String, AnyRef]]()
     future.addListener(new BulkGetCompletionListener() {
@@ -36,6 +45,16 @@ private[reactivecouchbase] object CouchbaseFutures {
     promise.future
   }
 
+  /**
+   *
+   * Transform an GetFuture to a Future[T]
+   *
+   * @param future the Java Driver Future
+   * @param b the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T internal type
+   * @return
+   */
   def waitForGet[T](future: GetFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
     future.addListener(new GetCompletionListener() {
@@ -59,10 +78,35 @@ private[reactivecouchbase] object CouchbaseFutures {
     promise.future
   }
 
-  class OperationStatusError(val opstat: OperationStatus) extends Throwable
-  class OperationStatusErrorNotFound(val opstat: OperationStatus) extends Throwable
-  class OperationStatusErrorIsLocked(val opstat: OperationStatus) extends Throwable
+  /**
+   *
+   * @param opstat the operation status
+   */
+  class OperationStatusError(val opstat: OperationStatus) extends ReactiveCouchbaseException("OperationStatusError", opstat.getMessage)
 
+  /**
+   *
+   * @param opstat the operation status
+   */
+  class OperationStatusErrorNotFound(val opstat: OperationStatus) extends ReactiveCouchbaseException("OperationStatusErrorNotFound", opstat.getMessage)
+
+  /**
+   *
+   * @param opstat the operation status
+   */
+  class OperationStatusErrorIsLocked(val opstat: OperationStatus) extends ReactiveCouchbaseException("OperationStatusErrorIsLocked", opstat.getMessage)
+
+  /**
+   *
+   * Transform an OperationFuture to a Future[CasValue[T]]
+   *
+   * @param future the Java Driver Future
+   * @param b the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @param r
+   * @tparam T internal type
+   * @return
+   */
   def waitForGetAndCas[T](future: OperationFuture[CASValue[Object]], b: CouchbaseBucket, ec: ExecutionContext, r: Reads[T]): Future[CASValue[T]] = {
     val promise = Promise[CASValue[T]]()
     future.addListener(new OperationCompletionListener() {
@@ -89,6 +133,16 @@ private[reactivecouchbase] object CouchbaseFutures {
     promise.future
   }
 
+  /**
+   *
+   * Transform an HttpFuture to a Future[OperationStatus]
+   *
+   * @param future the Java Driver Future
+   * @param b the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T internal type
+   * @return
+   */
   def waitForHttpStatus[T](future: HttpFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     val promise = Promise[OperationStatus]()
     future.addListener(new HttpCompletionListener() {
@@ -112,6 +166,16 @@ private[reactivecouchbase] object CouchbaseFutures {
     promise.future
   }
 
+  /**
+   *
+   * Transform an HttpFuture to a Future[T]
+   *
+   * @param future the Java Driver Future
+   * @param b the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T internal type
+   * @return
+   */
   def waitForHttp[T](future: HttpFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
     future.addListener(new HttpCompletionListener() {
@@ -135,6 +199,16 @@ private[reactivecouchbase] object CouchbaseFutures {
     promise.future
   }
 
+  /**
+   *
+   * Transform an OperationFuture to a Future[OperationStatus]
+   *
+   * @param future the Java Driver Future
+   * @param b the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T internal type
+   * @return the Scala Future
+   */
   def waitForOperationStatus[T](future: OperationFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     val promise = Promise[OperationStatus]()
     future.addListener(new OperationCompletionListener() {
@@ -158,6 +232,16 @@ private[reactivecouchbase] object CouchbaseFutures {
     promise.future
   }
 
+  /**
+   *
+   * Transform an OperationFuture to a Future[T]
+   *
+   * @param future the Java Driver Future
+   * @param b the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T internal type
+   * @return
+   */
   def waitForOperation[T](future: OperationFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
     future.addListener(new OperationCompletionListener() {

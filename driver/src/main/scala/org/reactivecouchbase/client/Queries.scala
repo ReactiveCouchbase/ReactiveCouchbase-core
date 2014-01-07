@@ -14,14 +14,43 @@ import scala.Some
 import play.api.libs.json.JsObject
 import org.reactivecouchbase.experimental.Views
 
+/**
+ *
+ *
+ *
+ * @param document
+ * @param id
+ * @param key
+ * @param value
+ */
 case class RawRow(document: Option[String], id: Option[String], key: String, value: String) {
   def toTuple = (document, id, key, value)
 }
 
+/**
+ *
+ *
+ *
+ * @param document
+ * @param id
+ * @param key
+ * @param value
+ * @tparam T
+ */
 case class JsRow[T](document: JsResult[T], id: Option[String], key: String, value: String) {
   def toTuple = (document, id, key, value)
 }
 
+/**
+ *
+ *
+ *
+ * @param document
+ * @param id
+ * @param key
+ * @param value
+ * @tparam T
+ */
 case class TypedRow[T](document: T, id: Option[String], key: String, value: String) {
   def toTuple = (document, id, key, value)
 }
@@ -45,6 +74,9 @@ class QueryEnumerator[T](futureEnumerator: Future[Enumerator[T]]) {
     futureEnumerator.flatMap(_(Iteratee.head[T]).flatMap(_.run))
 }
 
+/**
+ * Companion object to build QueryEnumerators
+ */
 object QueryEnumerator {
   def apply[T](enumerate: Future[Enumerator[T]]): QueryEnumerator[T] = new QueryEnumerator[T](enumerate)
 }
@@ -58,11 +90,47 @@ trait Queries {
     name//if (play.api.Play.isDev(play.api.Play.current)) s"dev_$name" else name
   }
 
+  /**
+   *
+   *
+   *
+   * @param docName
+   * @param viewName
+   * @param query
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def find[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext) = searchValues(docName, viewName)(query)(bucket, r, ec).toList(ec)
+
+  /**
+   *
+   *
+   *
+   * @param view
+   * @param query
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def find[T](view: View)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext) = searchValues(view)(query)(bucket, r, ec).toList(ec)
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////
-
+  /**
+   *
+   *
+   *
+   * @param docName
+   * @param viewName
+   * @param query
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def rawSearch(docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
     QueryEnumerator(view(docName, viewName).flatMap {
       case view: View => rawSearch(view)(query)(bucket, ec).enumerate
@@ -70,6 +138,16 @@ trait Queries {
     })
   }
 
+  /**
+   *
+   *
+   *
+   * @param view
+   * @param query
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def rawSearch(view: View)(query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
     if (bucket.useExperimentalQueries) {
       Views.internalCompatRawSearch(view, query, bucket, ec)
@@ -88,6 +166,19 @@ trait Queries {
     }
   }
 
+  /**
+   *
+   *
+   *
+   * @param docName
+   * @param viewName
+   * @param query
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def search[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = {
     QueryEnumerator(view(docName, viewName).flatMap {
       case view: View => search(view)(query)(bucket, r, ec).enumerate
@@ -95,6 +186,18 @@ trait Queries {
     })
   }
 
+  /**
+   *
+   *
+   *
+   * @param view
+   * @param query
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def search[T](view: View)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = {
     QueryEnumerator(rawSearch(view)(query)(bucket, ec).enumerate.map { enumerator =>
       enumerator &>
@@ -112,6 +215,19 @@ trait Queries {
     })
   }
 
+  /**
+   *
+   *
+   *
+   * @param docName
+   * @param viewName
+   * @param query
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def searchValues[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
     QueryEnumerator(view(docName, viewName).flatMap {
       case view: View => searchValues(view)(query)(bucket, r, ec).enumerate
@@ -119,6 +235,18 @@ trait Queries {
     })
   }
 
+  /**
+   *
+   *
+   *
+   * @param view
+   * @param query
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def searchValues[T](view: View)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
     QueryEnumerator(search[T](view)(query)(bucket, r, ec).enumerate.map { enumerator =>
       enumerator &> Enumeratee.map[TypedRow[T]](_.document)
@@ -128,7 +256,20 @@ trait Queries {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * The view must index numbers
+   *
+   *
+   *
+   * @param doc
+   * @param view
+   * @param extractor
+   * @param from
+   * @param every
+   * @param unit
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
    */
   def tailableQuery[T](doc: String, view: String, extractor: T => Long, from: Long = 0L, every: Long = 1000L, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     var last = from
@@ -146,60 +287,211 @@ trait Queries {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  /**
+   *
+   *
+   *
+   * @param doc
+   * @param view
+   * @param query
+   * @param everyMillis
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def pollQuery[T](doc: String, view: String, query: Query, everyMillis: Long)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     pollQuery[T](doc, view, query, everyMillis, { chunk: T => true })(bucket, r, ec)
   }
 
+  /**
+   *
+   *
+   *
+   * @param doc
+   * @param view
+   * @param query
+   * @param everyMillis
+   * @param filter
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def pollQuery[T](doc: String, view: String, query: Query, everyMillis: Long, filter: T => Boolean)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Enumerator.repeatM(
       Timeout.timeout(Some, everyMillis, TimeUnit.MILLISECONDS, bucket.driver.scheduler()).flatMap(_ => find[T](doc, view)(query)(bucket, r, ec))
     ).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( filter ) )
   }
 
+  /**
+   *
+   *
+   *
+   * @param doc
+   * @param view
+   * @param query
+   * @param trigger
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def repeatQuery[T](doc: String, view: String, query: Query, trigger: Future[AnyRef])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     repeatQuery[T](doc, view, query, trigger, { chunk: T => true })(bucket, r, ec)
   }
 
+  /**
+   *
+   *
+   *
+   * @param doc
+   * @param view
+   * @param query
+   * @param trigger
+   * @param filter
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def repeatQuery[T](doc: String, view: String, query: Query, trigger: Future[AnyRef], filter: T => Boolean)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     Enumerator.repeatM(
       trigger.flatMap { _ => find[T](doc, view)(query)(bucket, r, ec) }
     ).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( filter ) )
   }
 
+  /**
+   *
+   *
+   *
+   * @param doc
+   * @param view
+   * @param query
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def repeatQuery[T](doc: String, view: String, query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     repeatQuery[T](doc, view, query, { chunk: T => true })(bucket, r, ec)
   }
 
+  /**
+   *
+   *
+   *
+   * @param doc
+   * @param view
+   * @param query
+   * @param filter
+   * @param bucket
+   * @param r
+   * @param ec
+   * @tparam T
+   * @return
+   */
   def repeatQuery[T](doc: String, view: String, query: Query, filter: T => Boolean)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
     repeatQuery[T](doc, view, query, Future.successful(Some),filter)(bucket, r, ec)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+  /**
+   *
+   *
+   *
+   * @param docName
+   * @param viewName
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def view(docName: String, viewName: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[View] = {
     waitForHttp[View]( bucket.couchbaseClient.asyncGetView(docName, viewName), bucket, ec )
   }
 
+  /**
+   *
+   *
+   *
+   * @param docName
+   * @param viewName
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def spatialView(docName: String, viewName: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[SpatialView] = {
     waitForHttp[SpatialView]( bucket.couchbaseClient.asyncGetSpatialView(docName, viewName), bucket, ec )
   }
 
+  /**
+   *
+   *
+   *
+   * @param docName
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def designDocument(docName: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[DesignDocument] = {
     waitForHttp[DesignDocument]( bucket.couchbaseClient.asyncGetDesignDocument(docName), bucket, ec )
   }
 
+  /**
+   *
+   *
+   *
+   * @param name
+   * @param value
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def createDesignDoc(name: String, value: JsObject)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, Json.stringify(value)), bucket, ec )
   }
 
+  /**
+   *
+   *
+   *
+   * @param name
+   * @param value
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def createDesignDoc(name: String, value: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, value), bucket, ec )
   }
 
+  /**
+   *
+   *
+   *
+   * @param value
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def createDesignDoc(value: DesignDocument)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(value), bucket, ec )
   }
 
+  /**
+   *
+   *
+   *
+   * @param name
+   * @param bucket
+   * @param ec
+   * @return
+   */
   def deleteDesignDoc(name: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
     waitForHttpStatus( bucket.couchbaseClient.asyncDeleteDesignDoc(name), bucket, ec )
   }
