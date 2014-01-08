@@ -248,7 +248,10 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
    * Shutdown this driver
    */
   def shutdown() {
-    buckets.foreach(t => t._2.disconnect())
+    buckets.foreach(t => {
+      t._2.disconnect()
+      t._2.httpClient.close()
+    })
     system().shutdown()
   }
 }
