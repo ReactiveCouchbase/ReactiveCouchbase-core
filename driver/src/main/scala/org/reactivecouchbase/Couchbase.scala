@@ -30,7 +30,8 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
                        val hosts: List[String],
                        val port: String,
                        val base: String,
-                       val bucket: String,
+                       bucket: String,
+                       val alias: String,
                        val user: String,
                        val pass: String,
                        val timeout: Long) extends BucketAPI {
@@ -55,7 +56,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     if (failWithOpStatus) {
       driver.logger.info("Failing Futures on failed OperationStatus enabled.")
     }
-    new CouchbaseBucket(cbDriver, Some(client), hosts, port, base, bucket, user, pass, timeout)
+    new CouchbaseBucket(cbDriver, Some(client), hosts, port, base, bucket, alias, user, pass, timeout)
   }
 
   /**
@@ -66,7 +67,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
    */
   def disconnect(): CouchbaseBucket = {
     client.map(_.shutdown(timeout, TimeUnit.SECONDS))
-    new CouchbaseBucket(cbDriver, None, hosts, port, base, bucket, user, pass, timeout)
+    new CouchbaseBucket(cbDriver, None, hosts, port, base, bucket, alias, user, pass, timeout)
   }
 
   /**
@@ -156,8 +157,8 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
    */
   val bucketsConfig: Map[String, Config] = config.getObjectList("couchbase.buckets")
     .getOrElse(throw new ReactiveCouchbaseException("No configuration", "Can't find any bucket in conf !!!"))
-    .map(_.toConfig)
-    .map(b => (b.getString("bucket"), b))
+    .map(c => new Configuration(c.toConfig))
+    .map(b => (b.getString("alias").getOrElse(b.getString("bucket").getOrElse(throw new ReactiveCouchbaseException("Error", "No bucket name :("))), b.underlying))
     .toMap
 
   /**
@@ -185,11 +186,11 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
    */
   def logger: LoggerLike = log
 
-  def bucket(hosts: List[String], port: String, base: String, bucket: String, user: String, pass: String, timeout: Long): CouchbaseBucket = {
-    if (!buckets.containsKey(bucket)) {
-      buckets.putIfAbsent(bucket, new CouchbaseBucket(this, None, hosts, port, base, bucket, user, pass, timeout).connect())
+  def bucket(hosts: List[String], port: String, base: String, bucket: String, alias: String, user: String, pass: String, timeout: Long): CouchbaseBucket = {
+    if (!buckets.containsKey(alias)) {
+      buckets.putIfAbsent(alias, new CouchbaseBucket(this, None, hosts, port, base, bucket, alias, user, pass, timeout).connect())
     }
-    buckets.get(bucket)
+    buckets.get(alias)
   }
 
   def bucket(name: String): CouchbaseBucket = {
@@ -199,10 +200,11 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
       val port: String =        cfg.getString("port").getOrElse("8091")
       val base: String =        cfg.getString("base").getOrElse("pools")
       val bucket: String =      cfg.getString("bucket").getOrElse("default")
+      val alias: String =       cfg.getString("alias").getOrElse(bucket)
       val user: String =        cfg.getString("user").getOrElse("")
       val pass: String =        cfg.getString("pass").getOrElse("")
-      val timeout: Long =         cfg.getLong("timeout").getOrElse(0)
-      val cb = new CouchbaseBucket(this, None, hosts, port, base, bucket, user, pass, timeout).connect()
+      val timeout: Long =       cfg.getLong("timeout").getOrElse(0)
+      val cb = new CouchbaseBucket(this, None, hosts, port, base, bucket, alias, user, pass, timeout).connect()
       buckets.putIfAbsent(name, cb)
     }
     buckets.get(name)

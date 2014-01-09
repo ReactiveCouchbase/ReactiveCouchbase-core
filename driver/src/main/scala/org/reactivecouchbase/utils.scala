@@ -94,7 +94,7 @@ object StandaloneLogger extends LoggerLike {
   def logger[T](clazz: Class[T]): LoggerLike = new RCLogger(LoggerFactory.getLogger(clazz))
 }
 
-class Configuration(underlying: Config) {
+class Configuration(val underlying: Config) {
 
   private def readValue[T](path: String, v: => T): Option[T] = {
     try {

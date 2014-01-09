@@ -37,20 +37,20 @@ object CappedBucket {
    * @param bucket the bucket to use the bucket to transform in capped bucket
    * @param ec ExecutionContext for async processing ExecutionContext for async processing
    * @param max max elements in the capped bucket
-   * @param r Json reader for type Teaper trigger reaper to kill elements after max
+   * @param reaper trigger reaper to kill elements after max
    * @return the capped bucket
    */
   def apply(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = true) = {
-    if (!buckets.containsKey(bucket.bucket)) {
-      buckets.putIfAbsent(bucket.bucket, new CappedBucket(bucket, ec, max, reaper))
+    if (!buckets.containsKey(bucket.alias)) {
+      buckets.putIfAbsent(bucket.alias, new CappedBucket(bucket, ec, max, reaper))
     }
-    buckets.get(bucket.bucket)
+    buckets.get(bucket.alias)
   }
 
   private def enabledReaper(bucket: CouchbaseBucket, max: Int, ec: ExecutionContext) = {
-    if (!reaperOn.containsKey(bucket.bucket)) {
-      reaperOn.putIfAbsent(bucket.bucket, true)
-      bucket.driver.logger.info(s"Capped reaper is on for ${bucket.bucket} ...")
+    if (!reaperOn.containsKey(bucket.alias)) {
+      reaperOn.putIfAbsent(bucket.alias, true)
+      bucket.driver.logger.info(s"Capped reaper is on for ${bucket.alias} ...")
       bucket.driver.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
         val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
         bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
