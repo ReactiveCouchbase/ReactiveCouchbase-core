@@ -19,7 +19,7 @@ object CappedBucket {
   private def viewName = "byNaturalOrder"
   private def cappedRef = "__playcbcapped"
   private def cappedNaturalId = "__playcbcappednatural"
-  private def designDoc =
+  private def designDocOld =
     s"""
       {
         "views":{
@@ -29,6 +29,22 @@ object CappedBucket {
         }
       }
     """
+
+  private def designDoc = Json.obj(
+    "views" -> Json.obj(
+      "byNaturalOrder" -> Json.obj(
+        "map" -> s"""
+                    | function (doc, meta) {
+                    |   if (doc.$cappedRef) {
+                    |     if (doc.$cappedNaturalId) {
+                    |       emit(doc.$cappedNaturalId, null);
+                    |     }
+                    |   }
+                    | }
+                  """.stripMargin
+      )
+    )
+  )
 
   /**
    *
