@@ -106,8 +106,8 @@ object QueryEnumerator {
  */
 trait Queries {
 
-  def docName(name: String) = {
-    name//if (play.api.Play.isDev(play.api.Play.current)) s"dev_$name" else name
+  def docName(name: String)(implicit bucket: CouchbaseBucket) = {
+    s"${bucket.cbDriver.mode}${name}"
   }
 
   /**

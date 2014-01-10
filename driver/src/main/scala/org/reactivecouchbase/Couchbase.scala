@@ -145,7 +145,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
  *   val capped = driver.cappedBucket("default", 100, true)
  * }}}
  */
-class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike) {
+class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: LoggerLike, val mode: Mode) {
 
   /**
    * All the buckets managed by this driver
@@ -278,20 +278,20 @@ object ReactiveCouchbaseDriver {
   /**
    * @return a new ReactiveCouchbaseDriver with default actor system and configuration
    */
-  def apply(): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(defaultSystem, new Configuration(ConfigFactory.load()), StandaloneLogger)
+  def apply(): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(defaultSystem, new Configuration(ConfigFactory.load()), StandaloneLogger, Prod())
 
   /**
    * @param system a custom ActorSystem provided by the user
    * @return a new ReactiveCouchbaseDriver with default configuration
    */
-  def apply(system: ActorSystem): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, new Configuration(ConfigFactory.load()), StandaloneLogger)
+  def apply(system: ActorSystem): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, new Configuration(ConfigFactory.load()), StandaloneLogger, Prod())
 
   /**
    * @param system a custom ActorSystem provided by the user
    * @param config a custom configuration provided by the user
    * @return a new ReactiveCouchbaseDriver
    */
-  def apply(system: ActorSystem, config: Configuration): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, StandaloneLogger)
+  def apply(system: ActorSystem, config: Configuration): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, StandaloneLogger, Prod())
 
   /**
    * @param system a custom ActorSystem provided by the user
@@ -299,10 +299,40 @@ object ReactiveCouchbaseDriver {
    * @param logger a custom logger wrapper provided by the user
    * @return a new ReactiveCouchbaseDriver
    */
-  def apply(system: ActorSystem, config: Configuration, logger: LoggerLike): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, logger)
+  def apply(system: ActorSystem, config: Configuration, logger: LoggerLike): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, logger, Prod())
+
+  /**
+   * @param system a custom ActorSystem provided by the user
+   * @param config a custom configuration provided by the user
+   * @param logger a custom logger wrapper provided by the user
+   * @param mode mode of the driver
+   * @return a new ReactiveCouchbaseDriver
+   */
+  def apply(
+     system: ActorSystem = defaultSystem,
+     config: Configuration = new Configuration(ConfigFactory.load()),
+     logger: LoggerLike = StandaloneLogger,
+     mode: Mode = Prod()
+  ): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, logger, mode)
 }
 
 /**
  * Main API for Couchbase generic operations.
  */
 object Couchbase extends Read with Write with Delete with Counters with Queries with JavaApi with Atomic {}
+
+trait Mode {
+  def name: String
+}
+
+case class Dev() extends Mode {
+  def name: String = "dev_"
+}
+
+case class Prod() extends Mode {
+  def name: String = ""
+}
+
+case class Test() extends Mode {
+  def name: String = ""
+}
