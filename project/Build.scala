@@ -37,7 +37,7 @@ object ApplicationBuild extends Build {
     .settings(
       resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       resolvers += "Spy Repository" at "http://files.couchbase.com/maven2",
-      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.3.0",
+      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.3.0", // "1.2.3",
       libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.2.0",
       libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.2.0",
       libraryDependencies += "com.typesafe.play" %% "play-json" % "2.2.0",
