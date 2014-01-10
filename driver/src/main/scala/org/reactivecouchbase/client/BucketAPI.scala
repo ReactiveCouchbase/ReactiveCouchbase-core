@@ -19,6 +19,8 @@ import play.api.libs.json.JsObject
 trait BucketAPI {
   self: CouchbaseBucket =>
 
+  def docName(name: String) = Couchbase.docName(name)(self)
+
   /**
    *
    * Perform a Couchbase query on a view
