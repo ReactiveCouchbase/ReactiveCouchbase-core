@@ -89,9 +89,53 @@ class RCLogger(val logger: org.slf4j.Logger) extends LoggerLike  {
  *
  */
 object StandaloneLogger extends LoggerLike {
-  val logger = LoggerFactory.getLogger("ReactiveCouchbase")
+  lazy val logger = LoggerFactory.getLogger("ReactiveCouchbase")
   def logger(name: String): LoggerLike = new RCLogger(LoggerFactory.getLogger(name))
   def logger[T](clazz: Class[T]): LoggerLike = new RCLogger(LoggerFactory.getLogger(clazz))
+
+  def configure(): LoggerLike = {
+    {
+      import java.util.logging._
+      Option(java.util.logging.Logger.getLogger("")).map { root =>
+        root.setLevel(Level.FINEST)
+        root.getHandlers.foreach(root.removeHandler(_))
+      }
+    }
+    {
+      import org.slf4j._
+      import ch.qos.logback.classic.joran._
+      import ch.qos.logback.core.util._
+      import ch.qos.logback.classic._
+      try {
+        val ctx = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
+        val configurator = new JoranConfigurator
+        configurator.setContext(ctx)
+        ctx.reset()
+        try {
+          val configResource =
+            Option(System.getProperty("logger.resource"))
+              .map(s => if (s.startsWith("/")) s.drop(1) else s)
+              .map(r => Option(this.getClass.getClassLoader.getResource(r))
+              .getOrElse(new java.net.URL("file:///" + System.getProperty("logger.resource")))
+            ).orElse {
+              Option(System.getProperty("logger.file")).map(new java.io.File(_).toURI.toURL)
+            }.orElse {
+              Option(System.getProperty("logger.url")).map(new java.net.URL(_))
+            }.orElse {
+              Option(this.getClass.getClassLoader.getResource("application-logger.xml"))
+                .orElse(Option(this.getClass.getClassLoader.getResource("logger.xml")))
+            }
+          configResource.foreach { url => configurator.doConfigure(url) }
+        } catch {
+          case NonFatal(e) => e.printStackTrace()
+        }
+        StatusPrinter.printIfErrorsOccured(ctx)
+      } catch {
+        case NonFatal(_) =>
+      }
+      this
+    }
+  }
 }
 
 class Configuration(val underlying: Config) {

@@ -278,20 +278,20 @@ object ReactiveCouchbaseDriver {
   /**
    * @return a new ReactiveCouchbaseDriver with default actor system and configuration
    */
-  def apply(): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(defaultSystem, new Configuration(ConfigFactory.load()), StandaloneLogger, Prod())
+  def apply(): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(defaultSystem, new Configuration(ConfigFactory.load()), StandaloneLogger.configure(), Prod())
 
   /**
    * @param system a custom ActorSystem provided by the user
    * @return a new ReactiveCouchbaseDriver with default configuration
    */
-  def apply(system: ActorSystem): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, new Configuration(ConfigFactory.load()), StandaloneLogger, Prod())
+  def apply(system: ActorSystem): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, new Configuration(ConfigFactory.load()), StandaloneLogger.configure(), Prod())
 
   /**
    * @param system a custom ActorSystem provided by the user
    * @param config a custom configuration provided by the user
    * @return a new ReactiveCouchbaseDriver
    */
-  def apply(system: ActorSystem, config: Configuration): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, StandaloneLogger, Prod())
+  def apply(system: ActorSystem, config: Configuration): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, StandaloneLogger.configure(), Prod())
 
   /**
    * @param system a custom ActorSystem provided by the user
@@ -311,7 +311,7 @@ object ReactiveCouchbaseDriver {
   def apply(
      system: ActorSystem = defaultSystem,
      config: Configuration = new Configuration(ConfigFactory.load()),
-     logger: LoggerLike = StandaloneLogger,
+     logger: LoggerLike = StandaloneLogger.configure(),
      mode: Mode = Prod()
   ): ReactiveCouchbaseDriver = new ReactiveCouchbaseDriver(system, config, logger, mode)
 }
