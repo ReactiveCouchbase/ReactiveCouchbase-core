@@ -17,6 +17,10 @@ import akka.pattern.after
 import scala.util.control.ControlThrowable
 import org.reactivecouchbase.CouchbaseExpiration._
 
+/**
+ * @author Quentin ADAM - @waxzce - https://github.com/waxzce
+ */
+
 private[reactivecouchbase] case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int)
 
 private[reactivecouchbase] case class AtomicSucess[T](key: String)
