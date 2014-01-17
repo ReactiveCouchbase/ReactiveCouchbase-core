@@ -16,6 +16,16 @@ trait Delete {
    *
    * Delete a document
    *
+   * {{{
+   *   val driver = ReactiveCouchbaseDriver()
+   *   implicit val bucket = driver.bucket("default")
+   *   implicit val ec = import scala.concurrent.ExecutionContext.Implicits.global
+   *
+   *   Couchbase.delete("my-key").map { operationStatus =>
+   *     println(s"Delete done ${operationStatus.getMessage}")
+   *   }
+   * }}}
+   *
    * @param key the key to delete
    * @param persistTo persist flag
    * @param replicateTo repplication flag
