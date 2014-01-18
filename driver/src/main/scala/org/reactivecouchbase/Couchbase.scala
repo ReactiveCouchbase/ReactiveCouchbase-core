@@ -82,6 +82,10 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
    */
   def driver: ReactiveCouchbaseDriver = cbDriver
 
+  private[reactivecouchbase] val blockInFutures = cbDriver.configuration.getBoolean("couchbase.driver.blockinfutures").getOrElse(false)
+  private[reactivecouchbase] val block = cbDriver.configuration.getBoolean("couchbase.driver.block").getOrElse(false)
+  private[reactivecouchbase] val enableOperationTimeout = cbDriver.configuration.getBoolean("couchbase.driver.enableoperationtimeout").getOrElse(false)
+
   /**
    * Check if Futures from Java Driver are failed. If so, fails scala Future
    */
@@ -100,7 +104,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
   /**
    * Timeout
    */
-  private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.actorctx.timeout").getOrElse(1000L)
+  private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.actorctx.timeout").getOrElse(60000L)
 
   /**
    * Use experimental Query API instead of Java Drivers one

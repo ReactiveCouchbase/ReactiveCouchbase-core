@@ -7,11 +7,78 @@ import com.couchbase.client.internal.{ HttpCompletionListener, HttpFuture }
 import net.spy.memcached.ops.OperationStatus
 import play.api.libs.json.Reads
 import org.reactivecouchbase.CouchbaseBucket
+import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit
+import scala.util.control.NonFatal
 
 /**
  * Internal API to deal with Java Drivers Future
  */
 private[reactivecouchbase] object CouchbaseFutures {
+
+  def timeout[T](promise: Promise[T])(bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
+    if (bucket.enableOperationTimeout) {
+      bucket.cbDriver.scheduler().scheduleOnce(FiniteDuration(bucket.ecTimeout, TimeUnit.MILLISECONDS)) {
+        val done = promise tryFailure new java.util.concurrent.TimeoutException
+        if (done) {
+          bucket.cbDriver.logger.error(s"\n\n\nTimeout there !!!!\n\n\n")
+        }
+      }(ec)
+      promise.future
+    } else {
+      promise.future
+    }
+  }
+
+  def block[T](future: java.util.concurrent.Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
+    if (bucket.block) {
+      bucket.cbDriver.logger.warn("Current thread blocking operation")
+      try {
+        Future.successful(future.get(bucket.ecTimeout, TimeUnit.MILLISECONDS))
+      } catch {
+        case e: Throwable => Future.failed(e)
+      }
+    } else {
+      bucket.cbDriver.logger.warn("Pooled thread blocking operation")
+      Future( future.get() )
+    }
+  }
+
+  def oblock[T](future: HttpFuture[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+    if (bucket.block) {
+      bucket.cbDriver.logger.warn("Current thread blocking operation")
+      try {
+        future.get(bucket.ecTimeout, TimeUnit.MILLISECONDS)
+        Future.successful(future.getStatus)
+      } catch {
+        case e: Throwable => Future.failed(e)
+      }
+    } else {
+      bucket.cbDriver.logger.warn("Pooled thread blocking operation")
+      Future({
+        future.get()
+        future.getStatus
+      })
+    }
+  }
+
+  def oblock[T](future: OperationFuture[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+    if (bucket.block) {
+      bucket.cbDriver.logger.warn("Current thread blocking operation")
+      try {
+        future.get(bucket.ecTimeout, TimeUnit.MILLISECONDS)
+        Future.successful(future.getStatus)
+      } catch {
+        case e: Throwable => Future.failed(e)
+      }
+    } else {
+      bucket.cbDriver.logger.warn("Pooled thread blocking operation")
+      Future({
+        future.get()
+        future.getStatus
+      })
+    }
+  }
 
   /**
    *
@@ -23,26 +90,27 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @return
    */
   def waitForBulkRaw(future: BulkFuture[java.util.Map[String, AnyRef]], b: CouchbaseBucket, ec : ExecutionContext): Future[java.util.Map[String, AnyRef]] = {
+    if (b.blockInFutures) return block(future)(b, ec)
     val promise = Promise[java.util.Map[String, AnyRef]]()
     future.addListener(new BulkGetCompletionListener() {
       def onComplete(f: BulkGetFuture[_]) = {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
-          promise.failure(new OperationFailedException(f.getStatus))
+          promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
           if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled || f.isTimeout) {
-            promise.success(f.get().asInstanceOf[java.util.Map[String, AnyRef]])
+            promise.trySuccess(f.get().asInstanceOf[java.util.Map[String, AnyRef]])
           } else {
-            if (b.checkFutures) promise.failure(new Throwable(s"BulkFuture epic fail !!! ${f.isDone} : ${f.isCancelled} : ${f.isTimeout}"))
+            if (b.checkFutures) promise.tryFailure(new Throwable(s"BulkFuture epic fail !!! ${f.isDone} : ${f.isCancelled} : ${f.isTimeout}"))
             else {
               b.driver.logger.warn(s"BulkFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
-              promise.success(f.get().asInstanceOf[java.util.Map[String, AnyRef]])
+              promise.trySuccess(f.get().asInstanceOf[java.util.Map[String, AnyRef]])
             }
           }
         }
       }
     })
-    promise.future
+    timeout( promise )( b, ec )
   }
 
   /**
@@ -56,26 +124,27 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @return
    */
   def waitForGet[T](future: GetFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
+    if (b.blockInFutures) return block(future)(b, ec)
     val promise = Promise[T]()
     future.addListener(new GetCompletionListener() {
       def onComplete(f: GetFuture[_]) = {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
-          promise.failure(new OperationFailedException(f.getStatus))
+          promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
           if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
-            promise.success(f.get().asInstanceOf[T])
+            promise.trySuccess(f.get().asInstanceOf[T])
           } else {
-            if (b.checkFutures) promise.failure(new Throwable(s"GetFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
+            if (b.checkFutures) promise.tryFailure(new Throwable(s"GetFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
               b.driver.logger.warn(s"GetFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
-              promise.success(f.get().asInstanceOf[T])
+              promise.trySuccess(f.get().asInstanceOf[T])
             }
           }
         }
       }
     })
-    promise.future
+    timeout( promise )( b, ec )
   }
 
   /**
@@ -114,23 +183,22 @@ private[reactivecouchbase] object CouchbaseFutures {
         if (!f.getStatus.isSuccess) {
           b.driver.logger.error(f.getStatus.getMessage + " for key " + f.getKey)
           f.getStatus.getMessage match {
-            case "NOT_FOUND" => promise.failure(new OperationStatusErrorNotFound(f.getStatus))
-            case "LOCK_ERROR" => promise.failure(new OperationStatusErrorIsLocked(f.getStatus))
-            case _ => promise.failure(new OperationStatusError(f.getStatus))
+            case "NOT_FOUND" => promise.tryFailure(new OperationStatusErrorNotFound(f.getStatus))
+            case "LOCK_ERROR" => promise.tryFailure(new OperationStatusErrorIsLocked(f.getStatus))
+            case _ => promise.tryFailure(new OperationStatusError(f.getStatus))
           }
         } else if (f.isDone || f.isCancelled) {
-          promise.success(f.get().asInstanceOf[CASValue[T]])
+          promise.trySuccess(f.get().asInstanceOf[CASValue[T]])
         } else {
-          if (b.checkFutures) promise.failure(new Throwable(s"GetFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
+          if (b.checkFutures) promise.tryFailure(new Throwable(s"GetFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
           else {
             b.driver.logger.warn(s"GetFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
-            promise.success(f.get().asInstanceOf[CASValue[T]])
+            promise.trySuccess(f.get().asInstanceOf[CASValue[T]])
           }
         }
-
       }
     })
-    promise.future
+    timeout( promise )( b, ec )
   }
 
   /**
@@ -144,26 +212,27 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @return
    */
   def waitForHttpStatus[T](future: HttpFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+    if (b.blockInFutures) return oblock(future)(b, ec)
     val promise = Promise[OperationStatus]()
     future.addListener(new HttpCompletionListener() {
       def onComplete(f: HttpFuture[_]) = {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
-          promise.failure(new OperationFailedException(f.getStatus))
+          promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
           if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
-            promise.success(f.getStatus)
+            promise.trySuccess(f.getStatus)
           } else {
-            if (b.checkFutures) promise.failure(new Throwable(s"HttpFutureStatus epic fail !!! ${f.isDone} : ${f.isCancelled}"))
+            if (b.checkFutures) promise.tryFailure(new Throwable(s"HttpFutureStatus epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
               b.driver.logger.warn(s"HttpFutureStatus not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
-              promise.success(f.getStatus)
+              promise.trySuccess(f.getStatus)
             }
           }
         }
       }
     })
-    promise.future
+    timeout( promise )( b, ec )
   }
 
   /**
@@ -177,26 +246,27 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @return
    */
   def waitForHttp[T](future: HttpFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
+    if (b.blockInFutures) return block(future)(b, ec)
     val promise = Promise[T]()
     future.addListener(new HttpCompletionListener() {
       def onComplete(f: HttpFuture[_]) = {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
-          promise.failure(new OperationFailedException(f.getStatus))
+          promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
           if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
-            promise.success(f.get().asInstanceOf[T])
+            promise.trySuccess(f.get().asInstanceOf[T])
           } else {
-            if (b.checkFutures) promise.failure(new Throwable(s"HttpFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
+            if (b.checkFutures) promise.tryFailure(new Throwable(s"HttpFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
               b.driver.logger.warn(s"HttpFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
-              promise.success(f.get().asInstanceOf[T])
+              promise.trySuccess(f.get().asInstanceOf[T])
             }
           }
         }
       }
     })
-    promise.future
+    timeout( promise )( b, ec )
   }
 
   /**
@@ -210,26 +280,27 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @return the Scala Future
    */
   def waitForOperationStatus[T](future: OperationFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+    if (b.blockInFutures) return oblock(future)(b, ec)
     val promise = Promise[OperationStatus]()
     future.addListener(new OperationCompletionListener() {
       def onComplete(f: OperationFuture[_]) = {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
-          promise.failure(new OperationFailedException(f.getStatus))
+          promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
           if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
-            promise.success(f.getStatus)
+            promise.trySuccess(f.getStatus)
           } else {
-            if (b.checkFutures) promise.failure(new Throwable(s"OperationFutureStatus epic fail !!! ${f.isDone} : ${f.isCancelled}"))
+            if (b.checkFutures) promise.tryFailure(new Throwable(s"OperationFutureStatus epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
               b.driver.logger.warn(s"OperationFutureStatus not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
-              promise.success(f.getStatus)
+              promise.trySuccess(f.getStatus)
             }
           }
         }
       }
     })
-    promise.future
+    timeout( promise )( b, ec )
   }
 
   /**
@@ -243,25 +314,26 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @return
    */
   def waitForOperation[T](future: OperationFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
+    if (b.blockInFutures) return block(future)(b, ec)
     val promise = Promise[T]()
     future.addListener(new OperationCompletionListener() {
       def onComplete(f: OperationFuture[_]) = {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
-          promise.failure(new OperationFailedException(f.getStatus))
+          promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
           if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
-            promise.success(f.get().asInstanceOf[T])
+            promise.trySuccess(f.get().asInstanceOf[T])
           } else {
-            if (b.checkFutures) promise.failure(new Throwable(s"OperationFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
+            if (b.checkFutures) promise.tryFailure(new Throwable(s"OperationFuture epic fail !!! ${f.isDone} : ${f.isCancelled}"))
             else {
               b.driver.logger.warn(s"OperationFuture not completed yet, success anyway : ${f.isDone} : ${f.isCancelled}")
-              promise.success(f.get().asInstanceOf[T])
+              promise.trySuccess(f.get().asInstanceOf[T])
             }
           }
         }
       }
     })
-    promise.future
+    timeout( promise )( b, ec )
   }
 }
