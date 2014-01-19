@@ -1,12 +1,18 @@
 package org.reactivecouchbase.experimental
 
-import com.ning.http.client.{Response, AsyncCompletionHandler, AsyncHttpClient, AsyncHttpClientConfig}
+import com.ning.http.client.{Response, AsyncCompletionHandler}
 import com.couchbase.client.protocol.views.{Query, View}
 import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.{Promise, Future, ExecutionContext}
 import play.api.libs.json._
 import play.api.libs.iteratee.{Enumeratee, Enumerator}
 import org.reactivecouchbase.client.{ReactiveCouchbaseException, RawRow, QueryEnumerator}
+import akka.actor.{Props, ActorRef, ActorLogging, Actor}
+import akka.pattern._
+import java.util.concurrent.atomic.AtomicReference
+import akka.routing.RoundRobinRouter
+import akka.util.Timeout
+import java.util.concurrent.TimeUnit
 
 /**
  *
@@ -56,10 +62,34 @@ case class TypedViewRow[T](document: Option[JsValue], id: Option[String], key: S
   def withReads[A](r: Reads[A]): TypedViewRow[A] = TypedViewRow[A](document, id, key, value, meta, r)
 }
 
+
+private[experimental] case class SendQuery(view: View, query: Query, bucket: CouchbaseBucket, ec: ExecutionContext)
+private[experimental] case class QueryResponse(response: JsArray)
+private[experimental] class QueryWorker extends Actor with ActorLogging {
+  def receive = {
+    case SendQuery(view, query, bucket, ec) => {
+      val from = sender
+      Views.__internalViewQuery(view, query)(bucket, ec).map { array => from ! array }(ec)
+    }
+    case _ =>
+  }
+}
+
 /**
  * Custom API for Couchbase view querying
  */
 object Views {
+
+  private[experimental] val workers: AtomicReference[Option[ActorRef]] = new AtomicReference(None)
+
+  private[experimental] def pass(view: View, query: Query, bucket: CouchbaseBucket, ec: ExecutionContext): Future[JsArray] = {
+    implicit val timeout = Timeout(bucket.ecTimeout, TimeUnit.MILLISECONDS)
+    val ref: ActorRef = workers.get.getOrElse({
+       workers.set(Some(bucket.cbDriver.system().actorOf(Props[QueryWorker].withRouter(RoundRobinRouter(bucket.workersNbr)), "queries-dispatcher")))
+       workers.get().get
+    })
+    (ref ? SendQuery(view, query, bucket, ec)).mapTo[JsArray]
+  }
 
   /**
    *
@@ -71,7 +101,7 @@ object Views {
    * @param ec the ExecutionContext used for async processing
    * @return the future JsArray result
    */
-  private[experimental] def internalViewQuery(view: View, query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[JsArray] = {
+  private[experimental] def __internalViewQuery(view: View, query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[JsArray] = {
     val url = s"http://${bucket.hosts.head}:8092${view.getURI}${query.toString}&include_docs=${query.willIncludeDocs()}"
     val promise = Promise[String]()
     bucket.httpClient.prepareGet(url).execute(new AsyncCompletionHandler[Response]() {
@@ -167,7 +197,7 @@ object Views {
   private[experimental] def internalQuery[R](view: View, q: Query,
         transformation: (Option[JsValue], Option[String], String, String, Meta) => R,
         bucket: CouchbaseBucket, ec: ExecutionContext): Future[Enumerator[R]] = {
-    internalViewQuery(view, q)(bucket, ec).map { array =>
+    pass(view, q, bucket, ec).map { array =>
       Enumerator.enumerate(array.value)(ec).through(Enumeratee.map[JsValue] { slug =>
         val meta = Meta(
           (slug \ "doc" \ "meta" \ "id").asOpt[String].getOrElse(""),
@@ -196,7 +226,7 @@ object Views {
    * @return the QueryEnumerator that can stream the result of the query
    */
   private[reactivecouchbase] def internalCompatRawSearch(view: View, query: Query, bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
-    QueryEnumerator(internalViewQuery(view, query)(bucket, ec).map { array =>
+    QueryEnumerator(pass(view, query, bucket, ec).map { array =>
       Enumerator.enumerate(array.value)(ec).through(Enumeratee.map[JsValue] { slug =>
         val key = (slug \ "key").asOpt[String].getOrElse("")
         val value = (slug \ "value").asOpt[String].getOrElse("")

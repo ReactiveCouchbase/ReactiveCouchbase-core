@@ -110,6 +110,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
    * Use experimental Query API instead of Java Drivers one
    */
   private[reactivecouchbase] val useExperimentalQueries: Boolean = cbDriver.configuration.getBoolean("couchbase.experimental.queries").getOrElse(false)
+  private[reactivecouchbase] val workersNbr: Int = cbDriver.configuration.getInt("couchbase.experimental.workers").getOrElse(10)
 
   /**
    * Optional N1QL host
