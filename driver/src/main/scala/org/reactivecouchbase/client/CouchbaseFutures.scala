@@ -108,6 +108,7 @@ private[reactivecouchbase] object CouchbaseFutures {
             }
           }
         }
+        if (!promise.isCompleted) b.logger.warn("BulkFuture didn't complete the promise, that's weird !!!")
       }
     })
     timeout( promise )( b, ec )
@@ -142,6 +143,7 @@ private[reactivecouchbase] object CouchbaseFutures {
             }
           }
         }
+        if (!promise.isCompleted) b.logger.warn("GetFuture didn't complete the promise, that's weird !!!")
       }
     })
     timeout( promise )( b, ec )
@@ -196,6 +198,7 @@ private[reactivecouchbase] object CouchbaseFutures {
             promise.trySuccess(f.get().asInstanceOf[CASValue[T]])
           }
         }
+        if (!promise.isCompleted) b.logger.warn("CasFuture didn't complete the promise, that's weird !!!")
       }
     })
     timeout( promise )( b, ec )
@@ -230,6 +233,7 @@ private[reactivecouchbase] object CouchbaseFutures {
             }
           }
         }
+        if (!promise.isCompleted) b.logger.warn("HttpFuture didn't complete the promise, that's weird !!!")
       }
     })
     timeout( promise )( b, ec )
@@ -264,6 +268,7 @@ private[reactivecouchbase] object CouchbaseFutures {
             }
           }
         }
+        if (!promise.isCompleted) b.logger.warn("HttpFuture didn't complete the promise, that's weird !!!")
       }
     })
     timeout( promise )( b, ec )
@@ -298,6 +303,7 @@ private[reactivecouchbase] object CouchbaseFutures {
             }
           }
         }
+        if (!promise.isCompleted) b.logger.warn("OperationFuture didn't complete the promise, that's weird !!!")
       }
     })
     timeout( promise )( b, ec )
@@ -332,6 +338,7 @@ private[reactivecouchbase] object CouchbaseFutures {
             }
           }
         }
+        if (!promise.isCompleted) b.logger.warn("OperationFuture didn't complete the promise, that's weird !!!")
       }
     })
     timeout( promise )( b, ec )
