@@ -1,15 +1,14 @@
 package org.reactivecouchbase
 
 import org.slf4j.LoggerFactory
-import scala.concurrent.{Promise, Future, ExecutionContext}
-import java.util.concurrent.TimeUnit
+import scala.concurrent.{Promise, Future}
 import scala.concurrent.duration.FiniteDuration
 import akka.actor.Scheduler
 import com.typesafe.config._
 import scala.util.control.NonFatal
 import scala.concurrent.{ ExecutionContextExecutorService, ExecutionContext }
 import java.util.Collections
-import java.util.concurrent.{ConcurrentHashMap, AbstractExecutorService, TimeUnit}
+import java.util.concurrent.{AbstractExecutorService, TimeUnit}
 
 /**
  * Trait to wrap Logger
