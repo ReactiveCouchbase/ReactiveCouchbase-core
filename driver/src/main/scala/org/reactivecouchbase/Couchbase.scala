@@ -59,6 +59,8 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     new CouchbaseBucket(cbDriver, Some(client), hosts, port, base, bucket, alias, user, pass, timeout)
   }
 
+  def logger = cbDriver.logger
+
   /**
    *
    * Disconnect the current Java Driver from the Couchbase server
