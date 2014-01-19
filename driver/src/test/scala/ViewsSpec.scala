@@ -49,8 +49,14 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "Check view API" in {
       Await.result(bucket.view("persons", "by_name").flatMap { view =>
-        Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true))
-          .flatMap(e => e.apply(Iteratee.foreach( doc => println(doc))).map(_.run))
+        Future.sequence(Seq(
+          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => println(doc))).map(_.run)),
+          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run))
+        ))
       }, timeout)
       success
     }

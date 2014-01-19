@@ -69,6 +69,8 @@ private[experimental] class QueryWorker extends Actor with ActorLogging {
   def receive = {
     case SendQuery(view, query, bucket, ec) => {
       val from = sender
+      val name = self.path.name
+      bucket.logger.debug(s"Query from actor : $name")
       Views.__internalViewQuery(view, query)(bucket, ec).map { array => from ! array }(ec)
     }
     case _ =>

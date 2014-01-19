@@ -96,7 +96,7 @@ object StandaloneLogger extends LoggerLike {
     {
       import java.util.logging._
       Option(java.util.logging.Logger.getLogger("")).map { root =>
-        root.setLevel(Level.FINEST)
+        root.setLevel(java.util.logging.Level.FINEST)
         root.getHandlers.foreach(root.removeHandler(_))
       }
     }
