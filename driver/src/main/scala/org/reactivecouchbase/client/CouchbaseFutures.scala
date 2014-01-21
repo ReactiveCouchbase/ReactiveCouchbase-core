@@ -9,7 +9,6 @@ import play.api.libs.json.Reads
 import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
-import scala.util.control.NonFatal
 
 /**
  * Internal API to deal with Java Drivers Future
@@ -21,7 +20,7 @@ private[reactivecouchbase] object CouchbaseFutures {
       bucket.cbDriver.scheduler().scheduleOnce(FiniteDuration(bucket.ecTimeout, TimeUnit.MILLISECONDS)) {
         val done = promise tryFailure new java.util.concurrent.TimeoutException
         if (done) {
-          bucket.cbDriver.logger.error(s"\n\n\nTimeout there !!!!\n\n\n")
+          bucket.cbDriver.logger.error("Couchbase operation timeout there, what happened ???")
         }
       }(ec)
       promise.future
