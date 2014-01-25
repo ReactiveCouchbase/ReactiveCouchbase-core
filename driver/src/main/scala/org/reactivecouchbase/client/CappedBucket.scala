@@ -81,11 +81,12 @@ object CappedBucket {
     if (!reaperOn.containsKey(bucket.alias)) {
       bucket.driver.logger.info(s"Capped reaper is on for ${bucket.alias} ...")
       val cancel = bucket.driver.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
-        val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
-        bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
-          f.map { elem =>
-            bucket.delete(elem.id.get)(ec)
-          }}(ec)
+        if (reaperOn.containsKey(bucket.alias)) {
+          val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
+          bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
+            f.map { elem => bucket.delete(elem.id.get)(ec) }
+          }(ec)
+        }
       })(ec)
       reaperOn.putIfAbsent(bucket.alias, cancel)
     }
@@ -96,7 +97,7 @@ object CappedBucket {
   private lazy val trigger = triggerPromise.future
 
   private def setupViews(bucket: CouchbaseBucket, ec: ExecutionContext) = {
-    bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec).map(_ => triggerPromise.success(()))(ec)
+    bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec).map(_ => triggerPromise.trySuccess(()))(ec)
   }
 }
 
