@@ -51,6 +51,13 @@ object CappedBucket {
   def clearCache() = {
     buckets.clear()
     reaperOn.foreach( entry => entry._2.cancel() )
+    reaperOn.clear()
+  }
+
+  def clear(name: String) = {
+    buckets.remove(name)
+    if (reaperOn.containsKey(name)) reaperOn.get(name).cancel()
+    reaperOn.remove(name)
   }
 
   /**

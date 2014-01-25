@@ -69,6 +69,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
    */
   def disconnect(): CouchbaseBucket = {
     client.map(_.shutdown(timeout, TimeUnit.SECONDS))
+    CappedBucket.clear(alias)
     new CouchbaseBucket(cbDriver, None, hosts, port, base, bucket, alias, user, pass, timeout)
   }
 
