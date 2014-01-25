@@ -12,9 +12,11 @@ import scala.concurrent.duration.Duration
 import org.reactivecouchbase.CouchbaseExpiration._
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
+import akka.actor.Cancellable
+import collection.JavaConversions._
 
 object CappedBucket {
-  private val buckets = new ConcurrentHashMap[String, CappedBucket]()
+  private[reactivecouchbase] val buckets = new ConcurrentHashMap[String, CappedBucket]()
   private def docName = "play2couchbase-cappedbucket-designdoc"
   private def viewName = "byNaturalOrder"
   private def cappedRef = "__playcbcapped"
@@ -46,6 +48,11 @@ object CappedBucket {
     )
   )
 
+  def clearCache() = {
+    buckets.clear()
+    reaperOn.foreach( entry => entry._2.cancel() )
+  }
+
   /**
    *
    * Build a Capped Bucket from a bucket
@@ -65,19 +72,19 @@ object CappedBucket {
 
   private def enabledReaper(bucket: CouchbaseBucket, max: Int, ec: ExecutionContext) = {
     if (!reaperOn.containsKey(bucket.alias)) {
-      reaperOn.putIfAbsent(bucket.alias, true)
       bucket.driver.logger.info(s"Capped reaper is on for ${bucket.alias} ...")
-      bucket.driver.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
+      val cancel = bucket.driver.scheduler().schedule(Duration(0, TimeUnit.MILLISECONDS), Duration(1000, TimeUnit.MILLISECONDS))({
         val query = new Query().setIncludeDocs(false).setStale(Stale.FALSE).setDescending(true).setSkip(max)
         bucket.rawSearch(docName, viewName)(query)(ec).toList(ec).map { f =>
           f.map { elem =>
             bucket.delete(elem.id.get)(ec)
           }}(ec)
       })(ec)
+      reaperOn.putIfAbsent(bucket.alias, cancel)
     }
   }
 
-  private lazy val reaperOn = new ConcurrentHashMap[String, Boolean]()
+  private[reactivecouchbase] lazy val reaperOn = new ConcurrentHashMap[String, Cancellable]()
   private lazy val triggerPromise = Promise[Unit]()
   private lazy val trigger = triggerPromise.future
 
