@@ -262,6 +262,7 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
       t._2.disconnect()
       t._2.httpClient.close()
     })
+    CappedBucket.clearCache()
     system().shutdown()
   }
 }
