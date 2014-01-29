@@ -96,7 +96,7 @@ private[reactivecouchbase] object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
+          //if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled || f.isTimeout) {
             promise.trySuccess(f.get().asInstanceOf[java.util.Map[String, AnyRef]])
           } else {
@@ -131,7 +131,7 @@ private[reactivecouchbase] object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
+          //if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.trySuccess(f.get().asInstanceOf[T])
           } else {
@@ -221,7 +221,7 @@ private[reactivecouchbase] object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
+          //if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.trySuccess(f.getStatus)
           } else {
@@ -256,7 +256,7 @@ private[reactivecouchbase] object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
+          //if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.trySuccess(f.get().asInstanceOf[T])
           } else {
@@ -291,7 +291,7 @@ private[reactivecouchbase] object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
+          //if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.trySuccess(f.getStatus)
           } else {
@@ -326,7 +326,7 @@ private[reactivecouchbase] object CouchbaseFutures {
         if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
           promise.tryFailure(new OperationFailedException(f.getStatus))
         } else {
-          if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
+          //if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
           if (f.isDone || f.isCancelled) {
             promise.trySuccess(f.get().asInstanceOf[T])
           } else {
