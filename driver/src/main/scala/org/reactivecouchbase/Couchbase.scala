@@ -88,6 +88,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
   private[reactivecouchbase] val blockInFutures = cbDriver.configuration.getBoolean("couchbase.driver.blockinfutures").getOrElse(false)
   private[reactivecouchbase] val block = cbDriver.configuration.getBoolean("couchbase.driver.block").getOrElse(false)
   private[reactivecouchbase] val enableOperationTimeout = cbDriver.configuration.getBoolean("couchbase.driver.enableoperationtimeout").getOrElse(false)
+  private[reactivecouchbase] val doubleCheck = cbDriver.configuration.getBoolean("couchbase.driver.doublecheck").getOrElse(false)
 
   /**
    * Check if Futures from Java Driver are failed. If so, fails scala Future
