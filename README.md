@@ -247,7 +247,7 @@ enumerator1.map( doc => println(Json.prettyPrint(doc)) )
 ReactiveCouchbase N1QL search
 =======================
 
-N1QL is the Couchbase Query Language. The N1QL Developer Preview 1 (DP1) is a pre-beta release of the language and is available at
+N1QL is the Couchbase Query Language. The N1QL Developer Preview 2 (DP2) is a pre-beta release of the language and is available at
 
 http://www.couchbase.com/communities/n1ql
 
