@@ -97,7 +97,7 @@ trait JavaApi { self: Queries =>
   def javaGet[T](key: String, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case value: String => Future.successful(play.libs.Json.fromJson(play.libs.Json.parse(value), clazz))
-      case _ => Future.failed(new NullPointerException)
+      case _ => Future.failed(new IllegalStateException(s"Nothing found for key : $key"))
     }(ec)
   }
 
