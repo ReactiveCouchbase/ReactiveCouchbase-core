@@ -15,13 +15,11 @@ import java.util.concurrent.TimeUnit
  */
 private[reactivecouchbase] object CouchbaseFutures {
 
-  def timeout[T](promise: Promise[T], f: java.util.concurrent.Future[_], complete: => Unit)(bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
+  def timeout[T](promise: Promise[T], f: java.util.concurrent.Future[_], complete: () => Unit)(bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
     if (bucket.doubleCheck) {
       def check: Unit = {
-        if (!promise.isCompleted && (f.isDone || f.isCancelled)) {
-
-        }
-        if (!promise.isCompleted) bucket.cbDriver.scheduler().scheduleOnce(FiniteDuration(2, TimeUnit.SECONDS))(check)(ec)
+        if (!promise.isCompleted && (f.isDone || f.isCancelled)) complete()
+        else if (!promise.isCompleted) bucket.cbDriver.scheduler().scheduleOnce(FiniteDuration(2, TimeUnit.SECONDS))(check)(ec)
       }
       bucket.cbDriver.scheduler().scheduleOnce(FiniteDuration(2, TimeUnit.SECONDS))(check)(ec)
     }
