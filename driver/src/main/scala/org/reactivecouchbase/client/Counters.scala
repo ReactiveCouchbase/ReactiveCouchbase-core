@@ -2,7 +2,6 @@ package org.reactivecouchbase.client
 
 import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.{Future, ExecutionContext}
-import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
 
 /**
@@ -20,8 +19,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec )
+  def incr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -34,8 +33,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec )
+  def incr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -48,8 +47,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec )
+  def decr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -62,8 +61,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec )
+  def decr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**

@@ -33,8 +33,8 @@ trait Delete {
    * @param ec ExecutionContext for async processing
    * @return the operation status for the delete operation
    */
-  def delete(key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.delete(key, persistTo, replicateTo), bucket, ec )
+  def delete(key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.delete(key, persistTo, replicateTo), bucket, ec ) .map(OpResult(_, 1))
   }
 
   /**
@@ -49,8 +49,8 @@ trait Delete {
    * @tparam T type of documents
    * @return the operation status for the delete operation
    */
-  def deleteWithId[T <: {def id:String}](value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.delete(value.id, persistTo, replicateTo), bucket, ec )
+  def deleteWithId[T <: {def id:String}](value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.delete(value.id, persistTo, replicateTo), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -66,8 +66,8 @@ trait Delete {
    * @tparam T type of document
    * @return the operation status for the delete operation
    */
-  def deleteWithKey[T](key: T => String, value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.delete(key(value), persistTo, replicateTo), bucket, ec )
+  def deleteWithKey[T](key: T => String, value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.delete(key(value), persistTo, replicateTo), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -81,8 +81,8 @@ trait Delete {
    * @param ec ExecutionContext for async processing
    * @return the operation statuses for the delete operation
    */
-  def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[List[OperationStatus]] = {
-    data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
+  def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[List[OpResult]] = {
+    data(Iteratee.fold(List[ Future[OpResult]]()) { (list, chunk) =>
       list :+ delete(chunk, persistTo, replicateTo)(bucket, ec)
     }).flatMap(_.run).flatMap(Future.sequence(_))
   }
@@ -100,8 +100,8 @@ trait Delete {
    * @tparam T type of document
    * @return the operation statuses for the delete operation
    */
-  def deleteStreamWithKey[T](key: T => String, data: Enumerator[T], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[List[OperationStatus]] = {
-    data(Iteratee.fold(List[Future[OperationStatus]]()) { (list, chunk) =>
+  def deleteStreamWithKey[T](key: T => String, data: Enumerator[T], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[List[OpResult]] = {
+    data(Iteratee.fold(List[ Future[OpResult]]()) { (list, chunk) =>
       list :+ delete(key(chunk), persistTo, replicateTo)(bucket, ec)
     }).flatMap(_.run).flatMap(Future.sequence(_))
   }

@@ -180,7 +180,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    * @tparam T type of the doc
    * @return
    */
-  def insert[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def insert[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     val jsObj = w.writes(value).as[JsObject]
     val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
     CappedBucket.trigger.flatMap(_ => Couchbase.set[JsObject](key, enhancedJsObj, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
@@ -200,7 +200,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    * @tparam T type of the doc
    * @return
    */
-  def insertWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def insertWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     val jsObj = w.writes(value).as[JsObject]
     val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
     CappedBucket.trigger.flatMap(_ => Couchbase.setWithKey[JsObject]({ _ => key(value)}, enhancedJsObj, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
@@ -219,7 +219,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    * @tparam T type of the doc
    * @return
    */
-  def insertStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def insertStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     val enhancedEnumerator = data.through(Enumeratee.map { elem =>
       val jsObj = w.writes(elem._2).as[JsObject]
       val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
@@ -242,7 +242,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    * @tparam T type of the doc
    * @return
    */
-  def insertStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def insertStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     val enhancedEnumerator = data.through(Enumeratee.map { elem =>
       val jsObj = w.writes(elem).as[JsObject]
       val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
