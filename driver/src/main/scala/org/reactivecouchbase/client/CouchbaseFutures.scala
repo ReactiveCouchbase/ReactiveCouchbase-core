@@ -50,7 +50,7 @@ private[reactivecouchbase] object CouchbaseFutures {
     }
   }
 
-  def oblock[T](future: HttpFuture[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+  def oblock[T](future: HttpFuture[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OperationStatus] = {
     if (bucket.block) {
       bucket.cbDriver.logger.warn("Current thread blocking operation")
       try {
@@ -68,7 +68,7 @@ private[reactivecouchbase] object CouchbaseFutures {
     }
   }
 
-  def oblock[T](future: OperationFuture[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+  def oblock[T](future: OperationFuture[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OperationStatus] = {
     if (bucket.block) {
       bucket.cbDriver.logger.warn("Current thread blocking operation")
       try {
@@ -218,7 +218,7 @@ private[reactivecouchbase] object CouchbaseFutures {
 
   /**
    *
-   * Transform an HttpFuture to a Future[OperationStatus]
+   * Transform an HttpFuture to a  Future[OperationStatus]
    *
    * @param future the Java Driver Future
    * @param b the bucket to use
@@ -226,7 +226,7 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @tparam T internal type
    * @return
    */
-  def waitForHttpStatus[T](future: HttpFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+  def waitForHttpStatus[T](future: HttpFuture[T], b: CouchbaseBucket, ec: ExecutionContext):  Future[OperationStatus] = {
     if (b.blockInFutures) return oblock(future)(b, ec)
     val promise = Promise[OperationStatus]()
     def complete(): Unit = {
@@ -292,7 +292,7 @@ private[reactivecouchbase] object CouchbaseFutures {
 
   /**
    *
-   * Transform an OperationFuture to a Future[OperationStatus]
+   * Transform an OperationFuture to a  Future[OperationStatus]
    *
    * @param future the Java Driver Future
    * @param b the bucket to use
@@ -300,7 +300,7 @@ private[reactivecouchbase] object CouchbaseFutures {
    * @tparam T internal type
    * @return the Scala Future
    */
-  def waitForOperationStatus[T](future: OperationFuture[T], b: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
+  def waitForOperationStatus[T](future: OperationFuture[T], b: CouchbaseBucket, ec: ExecutionContext):  Future[OperationStatus] = {
     if (b.blockInFutures) return oblock(future)(b, ec)
     val promise = Promise[OperationStatus]()
     def complete(): Unit = {

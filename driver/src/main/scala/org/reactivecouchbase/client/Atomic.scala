@@ -2,7 +2,6 @@ package org.reactivecouchbase.client
 
 import org.reactivecouchbase.{LoggerLike, CouchbaseBucket}
 import scala.concurrent.{ Future, ExecutionContext }
-import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
 import net.spy.memcached.CASValue
 import play.api.libs.json._
@@ -159,8 +158,8 @@ trait Atomic {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def unlock(key: String, casId: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus(bucket.couchbaseClient.asyncUnlock(key, casId), bucket, ec)
+  def unlock(key: String, casId: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus(bucket.couchbaseClient.asyncUnlock(key, casId), bucket, ec).map(OpResult(_))
   }
 
   /**

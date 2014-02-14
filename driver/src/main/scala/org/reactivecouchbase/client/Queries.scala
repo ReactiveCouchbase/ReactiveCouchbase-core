@@ -472,8 +472,8 @@ trait Queries {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def createDesignDoc(name: String, value: JsObject)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, Json.stringify(value)), bucket, ec )
+  def createDesignDoc(name: String, value: JsObject)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, Json.stringify(value)), bucket, ec ).map(OpResult(_, 1, Some(value)))
   }
 
   /**
@@ -486,8 +486,8 @@ trait Queries {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def createDesignDoc(name: String, value: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, value), bucket, ec )
+  def createDesignDoc(name: String, value: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(name, value), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -499,8 +499,8 @@ trait Queries {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def createDesignDoc(value: DesignDocument)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(value), bucket, ec )
+  def createDesignDoc(value: DesignDocument)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForHttpStatus( bucket.couchbaseClient.asyncCreateDesignDoc(value), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -512,7 +512,7 @@ trait Queries {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def deleteDesignDoc(name: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForHttpStatus( bucket.couchbaseClient.asyncDeleteDesignDoc(name), bucket, ec )
+  def deleteDesignDoc(name: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForHttpStatus( bucket.couchbaseClient.asyncDeleteDesignDoc(name), bucket, ec ).map(OpResult(_, 1))
   }
 }

@@ -301,7 +301,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def createDesignDoc(name: String, value: JsObject)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def createDesignDoc(name: String, value: JsObject)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.createDesignDoc(name, value)(self, ec)
   }
 
@@ -314,7 +314,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def createDesignDoc(name: String, value: String)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def createDesignDoc(name: String, value: String)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.createDesignDoc(name, value)(self, ec)
   }
 
@@ -326,7 +326,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def createDesignDoc(value: DesignDocument)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def createDesignDoc(value: DesignDocument)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.createDesignDoc(value)(self, ec)
   }
 
@@ -338,7 +338,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def deleteDesignDoc(name: String)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def deleteDesignDoc(name: String)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.deleteDesignDoc(name)(self, ec)
   }
 
@@ -391,7 +391,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Int)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.incr(key, by)(self, ec)
+  def incr(key: String, by: Int)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.incr(key, by)(self, ec)
 
   /**
    *
@@ -402,7 +402,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Long)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.incr(key, by)(self, ec)
+  def incr(key: String, by: Long)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.incr(key, by)(self, ec)
 
   /**
    *
@@ -413,7 +413,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Int)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.decr(key, by)(self, ec)
+  def decr(key: String, by: Int)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.decr(key, by)(self, ec)
 
   /**
    *
@@ -424,7 +424,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Long)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.decr(key, by)(self, ec)
+  def decr(key: String, by: Long)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.decr(key, by)(self, ec)
 
   /**
    *
@@ -482,7 +482,7 @@ trait BucketAPI {
    * @param ec
    * @return
    */
-  def setBlob(key: String, value: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def setBlob(key: String, value: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.javaSet(key, exp, value, persistTo, replicateTo, self, ec)
   }
 
@@ -496,7 +496,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def set[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def set[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.set[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -514,7 +514,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def setWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def setWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.setWithKey[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -531,7 +531,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def setWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def setWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.set[T](value.id, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -549,7 +549,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def setStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def setStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.setStream[T](data, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -567,7 +567,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def setStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def setStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.setStreamWithKey[T](key, data, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -583,7 +583,7 @@ trait BucketAPI {
    * @param ec
    * @return
    */
-  def addBlob(key: String, value: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def addBlob(key: String, value: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.javaAdd(key, exp, value, persistTo, replicateTo, self, ec)
   }
 
@@ -601,7 +601,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def add[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def add[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.add[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -619,7 +619,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def addWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def addWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.addWithKey[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -636,7 +636,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def addWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def addWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.add[T](value.id, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -653,7 +653,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def addStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def addStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.addStream[T](data, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -671,7 +671,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def addStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def addStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.addStreamWithKey[T](key, data, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -687,7 +687,7 @@ trait BucketAPI {
    * @param ec
    * @return
    */
-  def replaceBlob(key: String, value: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def replaceBlob(key: String, value: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.javaReplace(key, exp, value, persistTo, replicateTo, self, ec)
   }
 
@@ -705,7 +705,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def replace[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def replace[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.replace[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -723,7 +723,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def replaceWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def replaceWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.replaceWithKey[T](key, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -740,7 +740,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def replaceWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[OperationStatus] = {
+  def replaceWithId[T <: { def id: String }](value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.replace[T](value.id, value, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -757,7 +757,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def replaceStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def replaceStream[T](data: Enumerator[(String, T)], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.replaceStream[T](data, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -775,7 +775,7 @@ trait BucketAPI {
    * @tparam T the type of the doc
    * @return the operation status
    */
-  def replaceStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def replaceStreamWithKey[T](key: T => String, data: Enumerator[T], exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.replaceStreamWithKey[T](key, data, exp, persistTo, replicateTo)(self, w, ec)
   }
 
@@ -789,7 +789,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status for the delete operation
    */
-  def delete(key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def delete(key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.delete(key, persistTo, replicateTo)(self, ec)
   }
 
@@ -804,7 +804,7 @@ trait BucketAPI {
    * @tparam T type of documents
    * @return the operation status for the delete operation
    */
-  def deleteWithId[T <: { def id: String }](value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def deleteWithId[T <: { def id: String }](value: T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.delete(value.id, persistTo, replicateTo)(self, ec)
   }
 
@@ -818,7 +818,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation statuses for the delete operation
    */
-  def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def deleteStream(data: Enumerator[String], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.deleteStream(data, persistTo, replicateTo)(self, ec)
   }
 
@@ -834,7 +834,7 @@ trait BucketAPI {
    * @tparam T type of document
    * @return the operation statuses for the delete operation
    */
-  def deleteStreamWithKey[T](key: T => String, data: Enumerator[T], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OperationStatus]] = {
+  def deleteStreamWithKey[T](key: T => String, data: Enumerator[T], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext): Future[List[OpResult]] = {
     Couchbase.deleteStreamWithKey[T](key, data, persistTo, replicateTo)(self, ec)
   }
 
@@ -846,7 +846,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def flush(delay: Int)(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.flush(delay)(self, ec)
+  def flush(delay: Int)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.flush(delay)(self, ec)
 
   /**
    *
@@ -855,7 +855,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def flush()(implicit ec: ExecutionContext): Future[OperationStatus] = Couchbase.flush()(self, ec)
+  def flush()(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.flush()(self, ec)
 
   /**
    *
@@ -881,7 +881,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def unlock(key: String, casId: Long)(implicit ec: ExecutionContext): Future[OperationStatus] = {
+  def unlock(key: String, casId: Long)(implicit ec: ExecutionContext):  Future[OpResult] = {
     Couchbase.unlock(key, casId)(self, ec)
   }
 

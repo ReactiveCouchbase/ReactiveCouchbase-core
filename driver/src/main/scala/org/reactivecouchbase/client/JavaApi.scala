@@ -3,10 +3,10 @@ package org.reactivecouchbase.client
 import net.spy.memcached.{ReplicateTo, PersistTo}
 import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.{Future, ExecutionContext}
-import net.spy.memcached.ops.OperationStatus
 import org.reactivecouchbase.client.CouchbaseFutures._
 import com.couchbase.client.protocol.views._
 import scala.collection.JavaConversions._
+import play.api.libs.json.Json
 
 /**
  * Trait for Java API (for Play framework usage)
@@ -29,8 +29,8 @@ trait JavaApi { self: Queries =>
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def javaReplace(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.replace(key, exp, value, persistTo, replicateTo), bucket, ec )
+  def javaReplace(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.replace(key, exp, value, persistTo, replicateTo), bucket, ec ).map(OpResult(_, 1, Some(Json.parse(value))))(ec)
   }
 
   /**
@@ -46,8 +46,8 @@ trait JavaApi { self: Queries =>
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def javaAdd(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.add(key, exp, value, persistTo, replicateTo), bucket, ec )
+  def javaAdd(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.add(key, exp, value, persistTo, replicateTo), bucket, ec ).map(OpResult(_, 1, Some(Json.parse(value))))(ec)
   }
 
   /**
@@ -63,8 +63,8 @@ trait JavaApi { self: Queries =>
    * @param ec ExecutionContext for async processing
    * @return the operation status
    */
-  def javaSet(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext): Future[OperationStatus] = {
-    waitForOperationStatus( bucket.couchbaseClient.set(key, exp, value, persistTo, replicateTo), bucket, ec )
+  def javaSet(key: String, exp: Int, value: String, persistTo: PersistTo, replicateTo: ReplicateTo, bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.set(key, exp, value, persistTo, replicateTo), bucket, ec ).map(OpResult(_, 1, Some(Json.parse(value))))(ec)
   }
 
   /**
