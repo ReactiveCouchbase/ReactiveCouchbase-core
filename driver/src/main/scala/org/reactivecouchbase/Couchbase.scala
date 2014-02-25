@@ -205,7 +205,13 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
   def bucket(name: String): CouchbaseBucket = {
     if (!buckets.containsKey(name)) {
       val cfg = new Configuration(bucketsConfig.get(name).getOrElse(throw new ReactiveCouchbaseException("No bucket", s"Cannot find bucket $name")))
-      val hosts: List[String] = cfg.getString("host").map(_.replace(" ", "")).map(_.split(",").toList).getOrElse(List("127.0.0.1"))
+      val hosts: List[String] = cfg.underlying.getValue("host").unwrapped() match {
+        case s: String if s.trim.isEmpty => List[String]("127.0.0.1")
+        case s: String if !s.trim.isEmpty => List(s)
+        case a: java.util.ArrayList[String] if !a.isEmpty => a.toList
+        case a: java.util.ArrayList[String] if a.isEmpty => List[String]("127.0.0.1")
+        case null => List[String]("127.0.0.1")
+      }
       val port: String =        cfg.getString("port").getOrElse("8091")
       val base: String =        cfg.getString("base").getOrElse("pools")
       val bucket: String =      cfg.getString("bucket").getOrElse("default")
