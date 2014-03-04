@@ -57,7 +57,7 @@ case class TypedRow[T](document: T, id: Option[String], key: String, value: Stri
 
 /**
  *
- * Reactive representation of a query result
+ * ReactiveCouchbase representation of a query result
  *
  * @param futureEnumerator doc stream
  * @tparam T type of the doc type of doc

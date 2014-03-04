@@ -31,7 +31,7 @@ trait Read {
    * fetch a document
    *
    * @param key the key of the document
-   * @param tc the transcodeuse
+   * @param tc the transcoder
    * @param bucket the bucket to use
    * @param ec ExecutionContext for async processing
    * @tparam T type of the doc
