@@ -10,7 +10,7 @@ object Constants {
   /**
    * Infinity persistence
    */
-  val expiration: Int = -1
+  val expiration: Int = 0
 
   /**
    * Standard PersistTo
