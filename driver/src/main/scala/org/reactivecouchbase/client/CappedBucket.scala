@@ -108,7 +108,7 @@ object CappedBucket {
 
   private def setupViews(bucket: CouchbaseBucket, ec: ExecutionContext) = {
     //bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec).map(_ => triggerPromise.trySuccess(()))(ec)
-    bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec).map(_ => CappedBucket.views.putIfAbsent(bucket.alias, Future.successful(())))(ec)
+    bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec).map(_ => CappedBucket.views.put(bucket.alias, Future.successful(())))(ec)
   }
 }
 
