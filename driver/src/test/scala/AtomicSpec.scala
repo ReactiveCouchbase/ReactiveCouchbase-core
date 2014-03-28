@@ -1,3 +1,4 @@
+import java.util.concurrent.TimeUnit
 import org.reactivecouchbase.{Timeout, ReactiveCouchbaseDriver}
 import org.specs2.mutable._
 import play.api.libs.json.Json
@@ -27,12 +28,54 @@ class AtomicSpec extends Specification with Tags {
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...
 """ in ok
 
-  val driver = ReactiveCouchbaseDriver()
-  val bucket = driver.bucket("default")
+  "ReactiveCouchbase atomic API" should {
 
-  val tk = "mylocktestkey_" // + UUID.randomUUID
+    import Utils._
+
+    val driver = ReactiveCouchbaseDriver()
+    val bucket = driver.bucket("default")
+
+    "try to update a non existent key" in {
+      val res = bucket.atomicallyUpdate[Person]("idontexists") { person =>
+        Future.successful(Person(person.name, person.surname, person.age + 1))
+      }
+      res.onComplete {
+        case Success(s) => bucket.logger.info("success " + s)
+        case Failure(f) => bucket.logger.info("failure " + f)
+      }
+      Await.ready(res, timeout)
+      success
+    }
+
+    "try to update an existent key" in {
+
+      Await.result(bucket.set("iexist", Person("John", "Doe", 42)), timeout)
+
+      val res = bucket.atomicallyUpdate[Person]("iexist") { person =>
+        Future.successful(Person(person.name, person.surname, person.age + 1))
+      }
+      res.onComplete {
+        case Success(s) => bucket.logger.info("success " + s)
+        case Failure(f) => bucket.logger.info("failure " + f)
+      }
+      Await.result(res, timeout)
+      Await.result(bucket.delete("iexist"), timeout)
+      success
+    }
+
+    "shutdown now" in {
+      //Await.result(bucket.flush(), timeout)
+      driver.shutdown()
+      success
+    }
+  }
 
   "ReactiveCouchbase atomic API" should {
+
+    val driver = ReactiveCouchbaseDriver()
+    val bucket = driver.bucket("default")
+
+    val tk = "mylocktestkey_" // + UUID.randomUUID
 
     "delete locked key" in {
       val fut = bucket.delete(tk)

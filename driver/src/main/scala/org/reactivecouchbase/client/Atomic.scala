@@ -23,7 +23,7 @@ import org.reactivecouchbase.CouchbaseExpiration._
 
 private[reactivecouchbase] case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int)
 
-private[reactivecouchbase] case class AtomicSucess[T](key: String)
+private[reactivecouchbase] case class AtomicSucess[T](key: String, payload: T)
 private[reactivecouchbase] case class AtomicError[T](request: AtomicRequest[T], message: String) extends ControlThrowable
 private[reactivecouchbase] case class AtomicTooMuchTryError[T](request: AtomicRequest[T]) extends ControlThrowable
 private[reactivecouchbase] case class AtomicNoKeyFoundError[T](request: AtomicRequest[T]) extends ControlThrowable
@@ -67,7 +67,7 @@ private[reactivecouchbase] class AtomicActor[T] extends Actor {
                 // reply to sender it's OK
               res match {
                 case CASResponse.OK => {
-                  sen ! Future.successful(AtomicSucess[T](ar.key))
+                  sen ! Future.successful(AtomicSucess[T](ar.key, nv))
                   self ! PoisonPill
                 }
                 case CASResponse.NOT_FOUND => {
@@ -181,7 +181,13 @@ trait Atomic {
     val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1)
     val atomic_actor = bucket.driver.system().actorOf(AtomicActor.props[T])
     atomic_actor ! LoggerHolder(bucket.driver.logger)
-    (atomic_actor.ask(ar)).map(_.asInstanceOf[T]) // I know it's ugly
+    atomic_actor.ask(ar).flatMap {
+      case f: Future[_] => f
+      case other => Future.successful(other)
+    }.map {
+      case AtomicSucess(_, something) => something
+      case other => other
+    }.map(_.asInstanceOf[T])
   }
 
   /**
