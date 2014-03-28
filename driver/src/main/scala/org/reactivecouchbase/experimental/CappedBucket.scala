@@ -1,4 +1,4 @@
-package org.reactivecouchbase.client
+package org.reactivecouchbase.experimental
 
 import org.reactivecouchbase._
 import com.couchbase.client.protocol.views.{Stale, Query}
@@ -14,6 +14,7 @@ import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
 import akka.actor.Cancellable
 import collection.JavaConversions._
+import org.reactivecouchbase.client.Constants
 
 object CappedBucket {
   //private[reactivecouchbase] val buckets = new ConcurrentHashMap[String, CappedBucket]()
@@ -70,7 +71,7 @@ object CappedBucket {
    * @param reaper trigger reaper to kill elements after max
    * @return the capped bucket
    */
-  def apply(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = false) = {
+  def apply(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int = 500, reaper: Boolean = false) = {
     //if (!buckets.containsKey(bucket.alias)) {
     //  buckets.putIfAbsent(bucket.alias, new CappedBucket(bucket, ec, max, reaper))
     //}
@@ -96,19 +97,19 @@ object CappedBucket {
   //private[reactivecouchbase] lazy val reaperOn = new ConcurrentHashMap[String, Cancellable]()
   //private lazy val triggerPromise = Promise[Unit]()
   //private lazy val trigger = triggerPromise.future
-  private[reactivecouchbase] lazy val views = new ConcurrentHashMap[String, Future[Unit]]()
+  private[reactivecouchbase] lazy val views = new ConcurrentHashMap[String, Boolean]()
 
-  private[reactivecouchbase] def trigger(bucket: CouchbaseBucket): Future[Unit] = {
+  private[reactivecouchbase] def trigger(bucket: CouchbaseBucket): Future[Boolean] = {
     if (!CappedBucket.views.containsKey(bucket.alias)) {
       Future.failed(new Throwable("CappedBucket not ready yet"))
     } else {
-      CappedBucket.views.get(bucket.alias)
+      Future.successful(true)//CappedBucket.views.get(bucket.alias)
     }
   }
 
   private def setupViews(bucket: CouchbaseBucket, ec: ExecutionContext) = {
     //bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec).map(_ => triggerPromise.trySuccess(()))(ec)
-    bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec).map(_ => CappedBucket.views.put(bucket.alias, Future.successful(())))(ec)
+    bucket.createDesignDoc(CappedBucket.docName, CappedBucket.designDoc)(ec)//.map(_ => CappedBucket.views.put(bucket.alias, Future.successful(())))(ec)
   }
 }
 
@@ -128,8 +129,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
 
   if (!CappedBucket.views.containsKey(bucket.alias)) {
     Await.result(CappedBucket.setupViews(bucket, ec), Duration(10, TimeUnit.SECONDS)) // I know that's ugly
-  } else {
-    if (!CappedBucket.views.get(bucket.alias).isCompleted) CappedBucket.setupViews(bucket, ec)
+    CappedBucket.views.put(bucket.alias, true)
   }
 
   /**
@@ -173,7 +173,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    * @tparam T type of the doc
    * @return
    */
-  def tail[T](from: Long = 0L, every: Long = 500, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit r: Reads[T], ec: ExecutionContext): Future[Enumerator[T]] = {
+  def tail[T](from: Long = 0L, every: Long = 200, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit r: Reads[T], ec: ExecutionContext): Future[Enumerator[T]] = {
     CappedBucket.trigger(bucket).map( _ => Couchbase.tailableQuery[JsObject](CappedBucket.docName, CappedBucket.viewName, { obj =>
       (obj \ CappedBucket.cappedNaturalId).as[Long]
     }, from, every, unit)(bucket, CouchbaseRWImplicits.documentAsJsObjectReader, ec).through(Enumeratee.map { elem =>

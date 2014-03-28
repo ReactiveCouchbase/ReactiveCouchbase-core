@@ -10,6 +10,7 @@ import akka.actor.{Scheduler, ActorSystem}
 import org.reactivecouchbase.client._
 import com.typesafe.config.{Config, ConfigFactory}
 import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
+import org.reactivecouchbase.experimental.CappedBucket
 
 /**
  *
