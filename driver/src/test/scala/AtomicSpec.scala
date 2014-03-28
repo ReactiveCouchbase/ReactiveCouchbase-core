@@ -1,28 +1,15 @@
-import java.util.concurrent.TimeUnit
-import org.reactivecouchbase.{Timeout, ReactiveCouchbaseDriver}
+import org.reactivecouchbase.ReactiveCouchbaseDriver
 import org.specs2.mutable._
-import play.api.libs.json.Json
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
-import org.specs2.execute.AsResult
 import akka.pattern.after
 import org.reactivecouchbase.CouchbaseExpiration._
-
-case class TestValue(value: String, number: Int, l: List[TestValue])
-
-object AtomicUtils {
-  implicit val fmt = Json.format[TestValue]
-  implicit val urlReader = Json.reads[TestValue]
-  implicit val urlWriter = Json.writes[TestValue]
-  implicit val ec = ExecutionContext.Implicits.global
-  val timeout = 10 seconds
-}
 
 class AtomicSpec extends Specification with Tags {
   sequential
 
-  import AtomicUtils._
+  import Utils._
 
 """
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...

@@ -1,5 +1,5 @@
 import com.couchbase.client.protocol.views.{Stale, Query}
-import org.reactivecouchbase.experimental.Views
+import org.reactivecouchbase.experimental.{TypedViewRow, Views}
 import org.reactivecouchbase.ReactiveCouchbaseDriver
 import org.specs2.mutable._
 import play.api.libs.iteratee.Iteratee
@@ -9,7 +9,7 @@ import scala.concurrent._
 class ViewsSpec extends Specification with Tags {
   sequential
 
-  import SearchUtils._
+  import Utils._
 
   """
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...
@@ -50,12 +50,12 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     "Check view API" in {
       Await.result(bucket.view("persons", "by_name").flatMap { view =>
         Future.sequence(Seq(
-          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => println(doc))).map(_.run)),
-          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
-          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
-          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
-          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
-          Views.query(view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run))
+          Views.query[Person](view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach[TypedViewRow[Person]]( doc => println(doc))).map(_.run)),
+          Views.query[Person](view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach[TypedViewRow[Person]]( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query[Person](view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach[TypedViewRow[Person]]( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query[Person](view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach[TypedViewRow[Person]]( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query[Person](view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach[TypedViewRow[Person]]( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run)),
+          Views.query[Person](view, new Query().setStale(Stale.FALSE).setIncludeDocs(true)).flatMap(e => e.apply(Iteratee.foreach[TypedViewRow[Person]]( doc => bucket.logger.debug(doc.document.map(Json.stringify).getOrElse("ERROR !!!")))).map(_.run))
         ))
       }, timeout)
       success

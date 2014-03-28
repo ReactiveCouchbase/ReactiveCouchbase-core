@@ -5,14 +5,6 @@ import play.api.libs.json.Json
 import scala.concurrent._
 import scala.concurrent.duration._
 
-case class Person(name: String, surname: String, age: Int)
-
-object Utils {
-  implicit val personFmt = Json.format[Person]
-  implicit val ec = ExecutionContext.Implicits.global
-  val timeout = 10 seconds
-}
-
 class BulkSpec extends Specification with Tags {
   sequential
 

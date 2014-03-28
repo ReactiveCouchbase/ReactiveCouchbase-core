@@ -5,16 +5,10 @@ import play.api.libs.json.Json
 import scala.concurrent._
 import scala.concurrent.duration._
 
-object SearchUtils {
-  implicit val personFmt = Json.format[Person]
-  implicit val ec = ExecutionContext.Implicits.global
-  val timeout = 10 seconds
-}
-
 class SearchSpec extends Specification with Tags {
   sequential
 
-  import SearchUtils._
+  import Utils._
 
   """
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...
@@ -54,7 +48,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "find people youger than 42" in {
       val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setRange(ComplexKey.of(0: java.lang.Integer), ComplexKey.of(41: java.lang.Integer))
-      Await.result(bucket.searchValues("persons", "by_age")(query).toList.map { list =>
+      Await.result(bucket.searchValues[Person]("persons", "by_age")(query).toList.map { list =>
         list.map { person =>
           if (person.age >= 42) failure(s"$person is older than 42")
         }
@@ -64,7 +58,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "find people older than 42" in {
       val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setRange(ComplexKey.of(43: java.lang.Integer), ComplexKey.of(100: java.lang.Integer))
-      Await.result(bucket.searchValues("persons", "by_age")(query).toList.map { list =>
+      Await.result(bucket.searchValues[Person]("persons", "by_age")(query).toList.map { list =>
         list.map { person =>
           if (person.age <= 42) failure(s"$person is younger than 42")
         }
@@ -74,7 +68,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "find people named Billy" in {
       val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setRange(ComplexKey.of("Billy"), ComplexKey.of("Billy\uefff"))
-      Await.result(bucket.searchValues("persons", "by_name")(query).toList.map { list =>
+      Await.result(bucket.searchValues[Person]("persons", "by_name")(query).toList.map { list =>
         if (list.size != 100) failure(s"No enought persons : ${list.size}")
       }, timeout)
       success
@@ -82,7 +76,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "find people named Bobby" in {
       val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setRange(ComplexKey.of("Bobby"), ComplexKey.of("Bobby\uefff"))
-      Await.result(bucket.searchValues("persons", "by_name")(query).toList.map { list =>
+      Await.result(bucket.searchValues[Person]("persons", "by_name")(query).toList.map { list =>
         if (!list.isEmpty) failure("Found people named Bobby")
       }, timeout)
       success

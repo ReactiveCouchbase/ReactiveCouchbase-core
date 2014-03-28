@@ -5,16 +5,10 @@ import play.api.libs.json.Json
 import scala.concurrent._
 import scala.concurrent.duration._
 
-object StreamingUtils {
-  implicit val personFmt = Json.format[Person]
-  implicit val ec = ExecutionContext.Implicits.global
-  val timeout = 10 seconds
-}
-
 class StreamingSpec extends Specification with Tags {
   sequential
 
-  import StreamingUtils._
+  import Utils._
 
   """
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...

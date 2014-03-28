@@ -8,7 +8,7 @@ import scala.concurrent.{ExecutionContext, Await}
 class AppendSpec extends Specification with Tags {
   sequential
 
-  import CappedUtils._
+  import Utils._
 
   """
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...

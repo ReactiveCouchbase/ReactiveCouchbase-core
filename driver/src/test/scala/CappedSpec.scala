@@ -7,16 +7,10 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import akka.pattern.after
 
-object CappedUtils {
-  implicit val personFmt = Json.format[Person]
-  implicit val ec = ExecutionContext.Implicits.global
-  val timeout = 10 seconds
-}
-
 class CappedSpec extends Specification with Tags {
   sequential
 
-  import CappedUtils._
+  import Utils._
 
   """
 You need to start a Couchbase server with a 'default' bucket on standard port to run those tests ...

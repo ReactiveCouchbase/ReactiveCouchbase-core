@@ -2,18 +2,14 @@ import java.util.concurrent.TimeUnit
 import org.reactivecouchbase.crud.ReactiveCRUD
 import org.reactivecouchbase.ReactiveCouchbaseDriver
 import org.specs2.mutable.{Tags, Specification}
-import play.api.libs.json.Json
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.concurrent.ExecutionContext.Implicits.global
 
-case class Beer(_id: String, name: String, price:Double, from: String)
+import Utils._
 
-object Beer extends ReactiveCRUD[Beer] {
+object BeerCRUD extends ReactiveCRUD[Beer] {
   val driver = ReactiveCouchbaseDriver()
   def bucket = driver.bucket("default")
-  def format = Json.format[Beer]
-  def ctx = scala.concurrent.ExecutionContext.Implicits.global
 }
 
 class ReactiveCrudSpec extends Specification with Tags {
@@ -28,7 +24,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
   "ReactiveCouchbase ReactiveCRUD API" should {
 
     "create some view" in {
-      Await.result(Beer.bucket.createDesignDoc("testbeers",
+      Await.result(BeerCRUD.bucket.createDesignDoc("testbeers",
         """
           | {
           |     "views":{
@@ -49,21 +45,21 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "insert a lot of data" in {
       for(i <- 0 to 99) {
-        Await.result(Beer.insert(Beer(s"beer--$i", s"Duff-$i", 2.0,s"Springfield-$i")), timeout)
+        Await.result(BeerCRUD.insert(Beer(s"beer--$i", s"Duff-$i", 2.0,s"Springfield-$i")), timeout)
       }
       success
     }
 
     "delete all data" in {
-      Await.result(Beer.bucket.deleteDesignDoc("testbeers"), timeout)
+      Await.result(BeerCRUD.bucket.deleteDesignDoc("testbeers"), timeout)
       for(i <- 0 to 99) {
-        Await.result(Beer.delete(s"beer--$i"), timeout)
+        Await.result(BeerCRUD.delete(s"beer--$i"), timeout)
       }
       success
     }
     
     "shutdown now" in {
-      Beer.driver.shutdown()
+      BeerCRUD.driver.shutdown()
       success
     }
   }
