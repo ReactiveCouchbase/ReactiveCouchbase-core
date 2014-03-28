@@ -7,6 +7,7 @@ import java.util.UUID
 import com.couchbase.client.protocol.views.{Query, View}
 import play.api.libs.iteratee.{Enumeratee, Iteratee, Enumerator}
 import org.reactivecouchbase.client.{ReactiveCouchbaseException, TypedRow}
+import net.spy.memcached.ops.OperationStatus
 
 /**
  *
@@ -14,24 +15,20 @@ import org.reactivecouchbase.client.{ReactiveCouchbaseException, TypedRow}
  *
  * @tparam T type of the doc
  */
-trait ReactiveCRUD[T] {
+abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
 
   import org.reactivecouchbase.CouchbaseRWImplicits._
-
-  /**
-   * @return ExecutionContext for async processing
-   */
-  implicit def ctx: ExecutionContext// = implicitly[ExecutionContext]
 
   /**
    * @return the bucket used
    */
   def bucket: CouchbaseBucket
 
-  /**
-   * @return the JSON format for T
-   */
-  def format: Format[T]
+  /** Override to customize deserialization and add validation. */
+  protected val reader: Reads[T]  = fmt
+
+  /** Override to customize serialization. */
+  protected val writer: Writes[T] = fmt
 
   /**
    * @return field name of the doc used as Id
@@ -47,7 +44,7 @@ trait ReactiveCRUD[T] {
    */
   def insert(t: T): Future[String] = {
     val id: String = UUID.randomUUID().toString
-    val json = format.writes(t).as[JsObject]
+    val json = writer.writes(t).as[JsObject]
     json \ idKey match {
       case _: JsUndefined => {
         val newJson = json ++ Json.obj(idKey -> JsString(id))
@@ -68,7 +65,7 @@ trait ReactiveCRUD[T] {
    * @return maybe the document and its key if found
    */
   def get(id: String): Future[Option[(T, String)]] = {
-    bucket.get[T]( id )(format, ctx).map( _.map( v => ( v, id ) ) )(ctx)
+    bucket.get[T]( id )(reader, ctx).map( _.map( v => ( v, id ) ) )(ctx)
   }
 
   /**
@@ -78,8 +75,8 @@ trait ReactiveCRUD[T] {
    * @param id key of the document
    * @return nothing useful
    */
-  def delete(id: String): Future[Unit] = {
-    bucket.delete(id)(ctx).map(_ => ())
+  def delete(id: String): Future[OperationStatus] = {
+    bucket.delete(id)(ctx)
   }
 
   /**
@@ -90,8 +87,8 @@ trait ReactiveCRUD[T] {
    * @param t the new value for the key
    * @return  nothing useful
    */
-  def update(id: String, t: T): Future[Unit] = {
-    bucket.replace(id, t)(format, ctx).map(_ => ())
+  def update(id: String, t: T): Future[OperationStatus] = {
+    bucket.replace(id, t)(writer, ctx)
   }
 
   /**
@@ -102,12 +99,12 @@ trait ReactiveCRUD[T] {
    * @param upd the partial update json object
    * @return nothing useful
    */
-  def updatePartial(id: String, upd: JsObject): Future[Unit] = {
+  def updatePartial(id: String, upd: JsObject): Future[OperationStatus] = {
     get(id).flatMap { opt =>
       opt.map { t =>
-        val json = Json.toJson(t._1)(format).as[JsObject]
+        val json = Json.toJson(t._1)(writer).as[JsObject]
         val newJson = json.deepMerge(upd)
-        bucket.replace((json \ idKey).as[JsString].value, newJson)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(_ => ())
+        bucket.replace((json \ idKey).as[JsString].value, newJson)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx)
       }.getOrElse(throw new ReactiveCouchbaseException("Error", s"Cannot find id $id"))
     }
   }
@@ -127,18 +124,19 @@ trait ReactiveCRUD[T] {
    *
    * Search for documents
    *
-   * @param sel the query
+   * @param view the view
+   * @param q the query
    * @param limit the size of the returned collection
    * @param skip to skip some documents
    * @return sequence of results
    */
-  def find(sel: (View, Query), limit: Int = 0, skip: Int = 0): Future[Seq[(T, String)]] = {
-    var query = sel._2
+  def find(view: View, q: Query, limit: Int = 0, skip: Int = 0): Future[Seq[(T, String)]] = {
+    var query = q
     if (limit != 0) query = query.setLimit(limit)
     if (skip != 0) query = query.setSkip(skip)
-    bucket.search[JsObject](sel._1)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toList(ctx).map { l =>
+    bucket.search[JsObject](view)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toList(ctx).map { l =>
       l.map { i =>
-        val t = format.reads(i.document) match {
+        val t = reader.reads(i.document) match {
           case e:JsError => throw new ReactiveCouchbaseException("Error", "Document does not match object")
           case s:JsSuccess[T] => s.get
         }
@@ -154,18 +152,19 @@ trait ReactiveCRUD[T] {
    *
    * Search for documents (result as stream)
    *
-   * @param sel the query
+   * @param view the view
+   * @param q the query
    * @param pageSize the size of the returned collection
    * @param skip to skip some documents
    * @return stream of results
    */
-  def findStream(sel: (View, Query), skip: Int = 0, pageSize: Int = 0): Enumerator[Iterator[(T, String)]] = {
-    var query = sel._2
+  def findStream(view: View, q: Query, skip: Int = 0, pageSize: Int = 0): Enumerator[Iterator[(T, String)]] = {
+    var query = q
     if (skip != 0) query = query.setSkip(skip)
-    val futureEnumerator = bucket.search[JsObject](sel._1)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toList(ctx).map { l =>
+    val futureEnumerator = bucket.search[JsObject](view)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toList(ctx).map { l =>
       val size = if(pageSize != 0) pageSize else l.size
       Enumerator.enumerate(l.map { i =>
-        val t = format.reads(i.document) match {
+        val t = reader.reads(i.document) match {
           case e:JsError => throw new ReactiveCouchbaseException("Error", "Document does not match object")
           case s:JsSuccess[T] => s.get
         }
@@ -182,12 +181,13 @@ trait ReactiveCRUD[T] {
    *
    * Delete multiple documents
    *
-   * @param sel query to find documents to delete
+   * @param view the view
+   * @param query the query to find doc to delete
    * @return nothing useful
    */
-  def batchDelete(sel: (View, Query)): Future[Unit] = {
+  def batchDelete(view: View, query: Query): Future[Unit] = {
     val extract = { tr: TypedRow[JsObject] => tr.id.get }
-    bucket.search[JsObject](sel._1)(sel._2)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).enumerate.map { enumerator =>
+    bucket.search[JsObject](view)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).enumerate.map { enumerator =>
       bucket.deleteStreamWithKey[TypedRow[JsObject]](extract, enumerator)(ctx)
     }.map(_ => ())
   }
@@ -196,14 +196,15 @@ trait ReactiveCRUD[T] {
    *
    * Update multiple documents
    *
-   * @param sel query to find documents to update
+   * @param view the view
+   * @param query the query to fond doc to update
    * @param upd partial update of documents
    * @return
    */
-  def batchUpdate(sel: (View, Query), upd: JsObject): Future[Unit] = {
-    bucket.search[T](sel._1)(sel._2)(format, ctx).enumerate.map { enumerator =>
+  def batchUpdate(view: View, query: Query, upd: JsObject): Future[Unit] = {
+    bucket.search[T](view)(query)(reader, ctx).enumerate.map { enumerator =>
       bucket.replaceStream(enumerator.through(Enumeratee.map { t =>
-        val json = Json.toJson(t.document)(format).as[JsObject]
+        val json = Json.toJson(t.document)(writer).as[JsObject]
         (t.id.get, json.deepMerge(upd))
       }))(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(_ => ())
     }
