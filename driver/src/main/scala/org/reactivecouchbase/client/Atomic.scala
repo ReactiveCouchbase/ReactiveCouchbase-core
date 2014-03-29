@@ -23,11 +23,12 @@ import org.reactivecouchbase.CouchbaseExpiration._
 private[reactivecouchbase] case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int)
 
 private[reactivecouchbase] case class AtomicSucess[T](key: String, payload: T)
-private[reactivecouchbase] case class AtomicError[T](request: AtomicRequest[T], message: String) extends ControlThrowable
-private[reactivecouchbase] case class AtomicTooMuchTryError[T](request: AtomicRequest[T]) extends ControlThrowable
-private[reactivecouchbase] case class AtomicNoKeyFoundError[T](request: AtomicRequest[T]) extends ControlThrowable
-private[reactivecouchbase] case class AtomicWeirdError() extends ControlThrowable
 private[reactivecouchbase] case class LoggerHolder(logger: LoggerLike)
+
+case class AtomicError[T](request: AtomicRequest[T], message: String) extends ControlThrowable
+case class AtomicTooMuchTryError[T](request: AtomicRequest[T]) extends ControlThrowable
+case class AtomicNoKeyFoundError[T](request: AtomicRequest[T]) extends ControlThrowable
+case class AtomicWeirdError() extends ControlThrowable
 
 private[reactivecouchbase] object AtomicActor {
   def props[T]: Props = Props(classOf[AtomicActor[T]])
