@@ -56,7 +56,8 @@ class N1QLQuery(bucket: CouchbaseBucket, query: String, host: String, port: Stri
    * @return the Enumerator of JsObject instances
    */
   def asJsonEnumerator(implicit ec: ExecutionContext): Enumerator[JsObject] = {
-    Concurrent.unicast[JsObject](onStart = c => enumerateJson(ec).map(_(Iteratee.foreach[JsObject](c.push).map(_ => c.eofAndEnd()))))
+    Enumerator.flatten(enumerateJson(ec))
+    //Concurrent.unicast[JsObject](onStart = c => enumerateJson(ec).map(_(Iteratee.foreach[JsObject](c.push).map(_ => c.eofAndEnd()))))
   }
 
   /**
@@ -69,7 +70,8 @@ class N1QLQuery(bucket: CouchbaseBucket, query: String, host: String, port: Stri
    * @return the Enumerator of T instances
    */
   def asEnumerator[T](implicit r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
-    Concurrent.unicast[T](onStart = c => enumerate[T](r, ec).map(_(Iteratee.foreach[T](c.push).map(_ => c.eofAndEnd()))))
+    Enumerator.flatten(enumerate[T](r, ec))
+    //Concurrent.unicast[T](onStart = c => enumerate[T](r, ec).map(_(Iteratee.foreach[T](c.push).map(_ => c.eofAndEnd()))))
   }
 
   /**
