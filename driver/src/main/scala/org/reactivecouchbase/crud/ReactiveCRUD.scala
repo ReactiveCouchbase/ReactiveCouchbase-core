@@ -42,16 +42,16 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @param t
    * @return
    */
-  def insert(t: T): Future[String] = {
+  def insert(t: T): Future[(String, OpResult)] = {
     val id: String = UUID.randomUUID().toString
     val json = writer.writes(t).as[JsObject]
     json \ idKey match {
       case _: JsUndefined => {
         val newJson = json ++ Json.obj(idKey -> JsString(id))
-        bucket.set(id, newJson)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(_ => id)(ctx)
+        bucket.set(id, newJson)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(r => (id, r))(ctx)
       }
       case actualId: JsString => {
-        bucket.set(actualId.value, json)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(_ => actualId.value)(ctx)
+        bucket.set(actualId.value, json)(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(r => (actualId.value, r))(ctx)
       }
       case _ => throw new ReactiveCouchbaseException("Error", s"Field with $idKey already exists and not of type JsString")
     }
@@ -116,8 +116,9 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @param elems the stream of documents
    * @return the number of documents inserted
    */
-  def batchInsert(elems: Enumerator[T]): Future[Int] = {
-    elems(Iteratee.foldM[T, Int](0)( (s, t) => insert(t).map(_ => s + 1))).flatMap(_.run)
+  def batchInsert(elems: Enumerator[T]): Future[List[OpResult]] = {
+    //elems(Iteratee.foldM[T, Int](0)( (s, t) => insert(t).map(_ => s + 1))).flatMap(_.run)
+    elems(Iteratee.foldM[T, List[OpResult]](List[OpResult]())( (s, t) => insert(t).map(st => s :+ st._2))).flatMap(_.run)
   }
 
   /**
@@ -185,11 +186,11 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @param query the query to find doc to delete
    * @return nothing useful
    */
-  def batchDelete(view: View, query: Query): Future[Unit] = {
+  def batchDelete(view: View, query: Query): Future[List[OpResult]] = {
     val extract = { tr: TypedRow[JsObject] => tr.id.get }
-    bucket.search[JsObject](view)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toEnumerator.map { enumerator =>
+    bucket.search[JsObject](view)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toEnumerator.flatMap { enumerator =>
       bucket.deleteStreamWithKey[TypedRow[JsObject]](extract, enumerator)(ctx)
-    }.map(_ => ())
+    }
   }
 
   /**
@@ -201,12 +202,12 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @param upd partial update of documents
    * @return
    */
-  def batchUpdate(view: View, query: Query, upd: JsObject): Future[Unit] = {
-    bucket.search[T](view)(query)(reader, ctx).toEnumerator.map { enumerator =>
+  def batchUpdate(view: View, query: Query, upd: JsObject): Future[List[OpResult]] = {
+    bucket.search[T](view)(query)(reader, ctx).toEnumerator.flatMap { enumerator =>
       bucket.replaceStream(enumerator.through(Enumeratee.map { t =>
         val json = Json.toJson(t.document)(writer).as[JsObject]
         (t.id.get, json.deepMerge(upd))
-      }))(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx).map(_ => ())
+      }))(CouchbaseRWImplicits.jsObjectToDocumentWriter, ctx)
     }
   }
 
