@@ -62,20 +62,21 @@ case class TypedRow[T](document: T, id: Option[String], key: String, value: Stri
  * @param futureEnumerator doc stream
  * @tparam T type of the doc type of doc
  */
-class QueryEnumerator[T](futureEnumerator: Future[Enumerator[T]]) {
+class QueryEnumerator[T](futureEnumerator: () => Future[Enumerator[T]]) {
 
   /**
    * @return the enumerator for query results
    */
-  def enumerate: Future[Enumerator[T]] = futureEnumerator
+  def toEnumerator: Future[Enumerator[T]] = futureEnumerator()
 
   /**
    * 
    * @param ec ExecutionContext for async processing
    * @return the query result as enumerator
    */
-  def enumerated(implicit ec: ExecutionContext): Enumerator[T] =
-    Concurrent.unicast[T](onStart = c => futureEnumerator.map(_(Iteratee.foreach[T](c.push).map(_ => c.eofAndEnd()))))
+  def enumerate(implicit ec: ExecutionContext): Enumerator[T] =
+    Enumerator.flatten(futureEnumerator())
+    //Concurrent.unicast[T](onStart = c => futureEnumerator.map(_(Iteratee.foreach[T](c.push).map(_ => c.eofAndEnd()))))
 
   /**
    *
@@ -83,7 +84,7 @@ class QueryEnumerator[T](futureEnumerator: Future[Enumerator[T]]) {
    * @return the query result as list
    */
   def toList(implicit ec: ExecutionContext): Future[List[T]] =
-    futureEnumerator.flatMap(_(Iteratee.getChunks[T]).flatMap(_.run))
+    futureEnumerator().flatMap(_(Iteratee.getChunks[T]).flatMap(_.run))
 
   /**
    * 
@@ -91,14 +92,14 @@ class QueryEnumerator[T](futureEnumerator: Future[Enumerator[T]]) {
    * @return the optinal head
    */
   def headOption(implicit ec: ExecutionContext): Future[Option[T]] =
-    futureEnumerator.flatMap(_(Iteratee.head[T]).flatMap(_.run))
+    futureEnumerator().flatMap(_(Iteratee.head[T]).flatMap(_.run))
 }
 
 /**
  * Companion object to build QueryEnumerators
  */
 object QueryEnumerator {
-  def apply[T](enumerate: Future[Enumerator[T]]): QueryEnumerator[T] = new QueryEnumerator[T](enumerate)
+  def apply[T](enumerate: () => Future[Enumerator[T]]): QueryEnumerator[T] = new QueryEnumerator[T](enumerate)
 }
 
 /**
@@ -152,8 +153,8 @@ trait Queries {
    * @return the query enumerator
    */
   def rawSearch(docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
-    QueryEnumerator(view(docName, viewName).flatMap {
-      case view: View => rawSearch(view)(query)(bucket, ec).enumerate
+    QueryEnumerator(() => view(docName, viewName).flatMap {
+      case view: View => rawSearch(view)(query)(bucket, ec).toEnumerator
       case _ => Future.failed(new ReactiveCouchbaseException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
     })
   }
@@ -172,7 +173,7 @@ trait Queries {
     if (bucket.useExperimentalQueries) {
       Views.internalCompatRawSearch(view, query, bucket, ec)
     } else {
-      QueryEnumerator(waitForHttp[ViewResponse]( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
+      QueryEnumerator(() => waitForHttp[ViewResponse]( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
         Enumerator.enumerate(results.iterator()) &> Enumeratee.map[ViewRow] {
           case r: ViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
           case r: ViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
@@ -200,8 +201,8 @@ trait Queries {
    * @return the query enumerator
    */
   def search[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = {
-    QueryEnumerator(view(docName, viewName).flatMap {
-      case view: View => search(view)(query)(bucket, r, ec).enumerate
+    QueryEnumerator(() => view(docName, viewName).flatMap {
+      case view: View => search(view)(query)(bucket, r, ec).toEnumerator
       case _ => Future.failed(new ReactiveCouchbaseException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
     })
   }
@@ -219,7 +220,7 @@ trait Queries {
    * @return the query enumerator
    */
   def search[T](view: View)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[TypedRow[T]] = {
-    QueryEnumerator(rawSearch(view)(query)(bucket, ec).enumerate.map { enumerator =>
+    QueryEnumerator(() => rawSearch(view)(query)(bucket, ec).toEnumerator.map { enumerator =>
       enumerator &>
         Enumeratee.map[RawRow] { row =>
           row.document.map { doc =>
@@ -249,8 +250,8 @@ trait Queries {
    * @return the query enumerator
    */
   def searchValues[T](docName:String, viewName: String)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
-    QueryEnumerator(view(docName, viewName).flatMap {
-      case view: View => searchValues(view)(query)(bucket, r, ec).enumerate
+    QueryEnumerator(() => view(docName, viewName).flatMap {
+      case view: View => searchValues(view)(query)(bucket, r, ec).toEnumerator
       case _ => Future.failed(new ReactiveCouchbaseException("Couchbase view error", s"Can't find view $viewName from $docName. Please create it."))
     })
   }
@@ -268,7 +269,7 @@ trait Queries {
    * @return the query enumerator
    */
   def searchValues[T](view: View)(query: Query)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
-    QueryEnumerator(search[T](view)(query)(bucket, r, ec).enumerate.map { enumerator =>
+    QueryEnumerator(() => search[T](view)(query)(bucket, r, ec).toEnumerator.map { enumerator =>
       enumerator &> Enumeratee.map[TypedRow[T]](_.document)
     })
   }

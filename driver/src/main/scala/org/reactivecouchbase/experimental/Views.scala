@@ -228,7 +228,7 @@ object Views {
    * @return the QueryEnumerator that can stream the result of the query
    */
   private[reactivecouchbase] def internalCompatRawSearch(view: View, query: Query, bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[RawRow] = {
-    QueryEnumerator(pass(view, query, bucket, ec).map { array =>
+    QueryEnumerator(() => pass(view, query, bucket, ec).map { array =>
       Enumerator.enumerate(array.value)(ec).through(Enumeratee.map[JsValue] { slug =>
         val key = (slug \ "key").asOpt[String].getOrElse("")
         val value = (slug \ "value").asOpt[String].getOrElse("")

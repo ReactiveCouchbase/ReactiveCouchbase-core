@@ -54,7 +54,7 @@ trait Read {
    * @return
    */
   def rawFetch(keysEnumerator: Enumerator[String])(implicit bucket: CouchbaseBucket, ec: ExecutionContext): QueryEnumerator[(String, String)] = {
-    QueryEnumerator(keysEnumerator.apply(Iteratee.getChunks[String]).flatMap(_.run).flatMap { keys =>
+    QueryEnumerator(() => keysEnumerator.apply(Iteratee.getChunks[String]).flatMap(_.run).flatMap { keys =>
       waitForBulkRaw( bucket.couchbaseClient.asyncGetBulk(keys), bucket, ec ).map { results =>
         Enumerator.enumerate(results.toList)
       }.map { enumerator =>
@@ -75,7 +75,7 @@ trait Read {
    * @return
    */
   def fetch[T](keysEnumerator: Enumerator[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[(String, T)] = {
-    QueryEnumerator(rawFetch(keysEnumerator)(bucket, ec).enumerate.map { enumerator =>
+    QueryEnumerator(() => rawFetch(keysEnumerator)(bucket, ec).toEnumerator.map { enumerator =>
       enumerator &> Enumeratee.map[(String, String)]( t => (t._1, r.reads(Json.parse(t._2))) ) &> Enumeratee.collect[(String, JsResult[T])] {
         case (k: String, JsSuccess(value, _)) => (k, value)
         case (k: String, JsError(errors)) if bucket.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
@@ -95,7 +95,7 @@ trait Read {
    * @return
    */
   def fetchValues[T](keysEnumerator: Enumerator[String])(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): QueryEnumerator[T] = {
-    QueryEnumerator(fetch[T](keysEnumerator)(bucket, r, ec).enumerate.map { enumerator =>
+    QueryEnumerator(() => fetch[T](keysEnumerator)(bucket, r, ec).toEnumerator.map { enumerator =>
       enumerator &> Enumeratee.map[(String, T)](_._2)
     })
   }

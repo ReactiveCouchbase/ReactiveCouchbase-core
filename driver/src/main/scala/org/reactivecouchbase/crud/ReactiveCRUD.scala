@@ -187,7 +187,7 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    */
   def batchDelete(view: View, query: Query): Future[Unit] = {
     val extract = { tr: TypedRow[JsObject] => tr.id.get }
-    bucket.search[JsObject](view)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).enumerate.map { enumerator =>
+    bucket.search[JsObject](view)(query)(CouchbaseRWImplicits.documentAsJsObjectReader, ctx).toEnumerator.map { enumerator =>
       bucket.deleteStreamWithKey[TypedRow[JsObject]](extract, enumerator)(ctx)
     }.map(_ => ())
   }
@@ -202,7 +202,7 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @return
    */
   def batchUpdate(view: View, query: Query, upd: JsObject): Future[Unit] = {
-    bucket.search[T](view)(query)(reader, ctx).enumerate.map { enumerator =>
+    bucket.search[T](view)(query)(reader, ctx).toEnumerator.map { enumerator =>
       bucket.replaceStream(enumerator.through(Enumeratee.map { t =>
         val json = Json.toJson(t.document)(writer).as[JsObject]
         (t.id.get, json.deepMerge(upd))

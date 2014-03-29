@@ -97,7 +97,7 @@ object Application4 extends App {
   // then enumerate it and print each document on the fly
   // streaming style
   bucket.searchValues[JsObject]("beers", "brewery_beers")(new Query().setIncludeDocs(true))
-        .enumerated.apply(Iteratee.foreach { doc =>
+        .enumerate.apply(Iteratee.foreach { doc =>
     println(s"One more beer for the road  : ${Json.prettyPrint(doc)}")
   })
 
