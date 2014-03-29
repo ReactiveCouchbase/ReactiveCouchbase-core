@@ -1,4 +1,4 @@
-package org.reactivecouchbase.client
+package org.reactivecouchbase.experimental
 
 import play.api.libs.json.Json
 
