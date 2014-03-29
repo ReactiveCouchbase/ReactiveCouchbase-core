@@ -4,7 +4,10 @@ import play.api.libs.json.JsValue
 import net.spy.memcached.ops.OperationStatus
 
 case class OpResult(ok: Boolean, msg: Option[String], document: Option[JsValue], updated: Int, originalOperationStatus: Option[OperationStatus]) {
-
+  def isSuccess = ok
+  def isFailure = !ok
+  def getMessage = msg.getOrElse("No message !!!")
+  def getMessage(mess: String) = msg.getOrElse(mess)
 }
 
 object OpResult {
