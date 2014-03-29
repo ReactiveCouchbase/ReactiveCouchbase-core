@@ -3,18 +3,15 @@ package org.reactivecouchbase.experimental
 import org.reactivecouchbase._
 import com.couchbase.client.protocol.views.{Stale, Query}
 import play.api.libs.json._
-import scala.concurrent.{Await, Promise, Future, ExecutionContext}
+import scala.concurrent.{Await, Future, ExecutionContext}
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import play.api.libs.iteratee.{Enumeratee, Enumerator}
 import net.spy.memcached.{ReplicateTo, PersistTo}
-import net.spy.memcached.ops.OperationStatus
 import scala.concurrent.duration.Duration
 import org.reactivecouchbase.CouchbaseExpiration._
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
-import akka.actor.Cancellable
-import collection.JavaConversions._
-import org.reactivecouchbase.client.Constants
+import org.reactivecouchbase.client.{OpResult, Constants}
 
 object CappedBucket {
   //private[reactivecouchbase] val buckets = new ConcurrentHashMap[String, CappedBucket]()

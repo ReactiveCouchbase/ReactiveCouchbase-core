@@ -6,7 +6,7 @@ import scala.concurrent.{Future, ExecutionContext}
 import java.util.UUID
 import com.couchbase.client.protocol.views.{Query, View}
 import play.api.libs.iteratee.{Enumeratee, Iteratee, Enumerator}
-import org.reactivecouchbase.client.{ReactiveCouchbaseException, TypedRow}
+import org.reactivecouchbase.client.{OpResult, ReactiveCouchbaseException, TypedRow}
 import net.spy.memcached.ops.OperationStatus
 
 /**
@@ -75,7 +75,7 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @param id key of the document
    * @return nothing useful
    */
-  def delete(id: String): Future[OperationStatus] = {
+  def delete(id: String): Future[OpResult] = {
     bucket.delete(id)(ctx)
   }
 
@@ -87,7 +87,7 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @param t the new value for the key
    * @return  nothing useful
    */
-  def update(id: String, t: T): Future[OperationStatus] = {
+  def update(id: String, t: T): Future[OpResult] = {
     bucket.replace(id, t)(writer, ctx)
   }
 
@@ -99,7 +99,7 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @param upd the partial update json object
    * @return nothing useful
    */
-  def updatePartial(id: String, upd: JsObject): Future[OperationStatus] = {
+  def updatePartial(id: String, upd: JsObject): Future[OpResult] = {
     get(id).flatMap { opt =>
       opt.map { t =>
         val json = Json.toJson(t._1)(writer).as[JsObject]
