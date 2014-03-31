@@ -88,24 +88,24 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
           ntv
         }
       }
-      bucket.atomicUpdate[TestValue](tk, f).onComplete({
+      bucket.atomicUpdate[TestValue](tk)(f).onComplete({
         case Success(r) => println("Success of 1 atomic update")
         case Failure(r) => println("Faillure of 1 atomic update")
       })
-      bucket.atomicUpdate[TestValue](tk, f).onComplete({
+      bucket.atomicUpdate[TestValue](tk)(f).onComplete({
         case Success(r) => println("Success of 2 atomic update")
         case Failure(r) => println("Faillure of 2 atomic update")
       })
-      bucket.atomicUpdate[TestValue](tk, f).onComplete({
+      bucket.atomicUpdate[TestValue](tk)(f).onComplete({
         case Success(r) => println("Success of 3 atomic update")
         case Failure(r) => println("Faillure of 3 atomic update")
       })
-      bucket.atomicUpdate[TestValue](tk, f).onComplete({
+      bucket.atomicUpdate[TestValue](tk)(f).onComplete({
         case Success(r) => println("Success of 4 atomic update")
         case Failure(r) => println("Faillure of 4 atomic update")
       })
 
-      bucket.atomicUpdate[TestValue](tk + "-plop", f).onComplete({
+      bucket.atomicUpdate[TestValue](tk + "-plop")(f).onComplete({
         case Success(r) => println("Failure : successfully updated a non existing key O_o")
         case Failure(r) => println("Success : unable to update a non existing key")
       })

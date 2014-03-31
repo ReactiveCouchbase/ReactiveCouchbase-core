@@ -233,7 +233,7 @@ trait Atomic {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicUpdate[T](key: String, operation: T => T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+  def atomicUpdate[T](key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     performAtomicUpdate(key, None, persistTo, replicateTo)((arg: T) => Future(operation(arg)))(bucket, ec, r, w)
   }
 
@@ -253,7 +253,7 @@ trait Atomic {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicUpdate[T](key: String, exp: CouchbaseExpirationTiming, operation: T => T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+  def atomicUpdate[T](key: String, exp: CouchbaseExpirationTiming, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     performAtomicUpdate(key, Some(exp), persistTo, replicateTo)((arg: T) => Future(operation(arg)))(bucket, ec, r, w)
   }
 
