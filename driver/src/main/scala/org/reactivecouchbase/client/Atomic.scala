@@ -3,14 +3,13 @@ package org.reactivecouchbase.client
 import org.reactivecouchbase.{LoggerLike, CouchbaseBucket}
 import scala.concurrent.{ Future, ExecutionContext }
 import org.reactivecouchbase.client.CouchbaseFutures._
-import net.spy.memcached.CASValue
+import net.spy.memcached.{ReplicateTo, PersistTo, CASValue, CASResponse}
 import play.api.libs.json._
 import akka.actor._
 import akka.pattern._
 import akka.actor.Props
 import akka.util.Timeout
 import scala.concurrent.duration._
-import net.spy.memcached.CASResponse
 import scala.util.{Failure, Success}
 import akka.pattern.after
 import scala.util.control.ControlThrowable
@@ -20,7 +19,7 @@ import org.reactivecouchbase.CouchbaseExpiration._
  * @author Quentin ADAM - @waxzce - https://github.com/waxzce
  */
 
-private[reactivecouchbase] case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int)
+private[reactivecouchbase] case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int, persistTo: PersistTo, replicateTo: ReplicateTo, expiration: Option[CouchbaseExpirationTiming])
 
 private[reactivecouchbase] case class AtomicSucess[T](key: String, payload: T)
 private[reactivecouchbase] case class LoggerHolder(logger: LoggerLike)
@@ -63,7 +62,10 @@ private[reactivecouchbase] class AtomicActor[T] extends Actor {
             ar.operation(cv).map { nv =>
               // write new object to couchbase and unlock :-)
               // TODO : use asyncCAS method, better io management
-              val res = ar.bucket.couchbaseClient.cas(ar.key, cas.getCas, ar.w.writes(nv).toString)
+              val res = ar.expiration match {
+                case Some(exp) => ar.bucket.couchbaseClient.cas(ar.key, cas.getCas, exp, Json.stringify(ar.w.writes(nv)), ar.persistTo, ar.replicateTo)
+                case None => ar.bucket.couchbaseClient.cas(ar.key, cas.getCas, Json.stringify(ar.w.writes(nv)), ar.persistTo, ar.replicateTo)
+              }
                 // reply to sender it's OK
               res match {
                 case CASResponse.OK => {
@@ -77,7 +79,7 @@ private[reactivecouchbase] class AtomicActor[T] extends Actor {
                 case CASResponse.EXISTS => {
                   // something REALLY weird append during the locking time. But anyway, we can retry :-)
                   bb.driver.logger.warn("Couchbase lock WEIRD error : desync of CAS value. Retry anyway")
-                  val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1)
+                  val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1, ar.persistTo, ar.replicateTo, ar.expiration)
                   val atomic_actor = bb.driver.system().actorOf(AtomicActor.props[T])
                   for (
                     tr <- (atomic_actor ? ar2)
@@ -98,7 +100,7 @@ private[reactivecouchbase] class AtomicActor[T] extends Actor {
           case r => {
             // Too bad, the object is not locked and some else is working on it...
             // build a new atomic request
-            val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1)
+            val ar2 = AtomicRequest(ar.key, ar.operation, ar.bucket, ar.atomic, ar.r, ar.w, ar.ec, ar.numberTry + 1, ar.persistTo, ar.replicateTo, ar.expiration)
             // get my actor
             val atomic_actor = bb.driver.system().actorOf(AtomicActor.props[T])
             // wait and retry by asking actor with new atomic request
@@ -168,6 +170,8 @@ trait Atomic {
    * Atomically perform async operation(s) on a document while it's locked
    *
    * @param key the key of the document
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
    * @param operation the async operation(s) to perform on the document while it's locked
    * @param bucket the bucket to use
    * @param ec ExecutionContext for async processing
@@ -176,9 +180,33 @@ trait Atomic {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicallyUpdate[T](key: String)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+  def atomicallyUpdate[T](key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    performAtomicUpdate(key, None, persistTo, replicateTo)(operation)(bucket, ec, r, w)
+  }
+
+  /**
+   *
+   * Atomically perform async operation(s) on a document while it's locked
+   *
+   * @param key the key of the document
+   * @param exp expiration of the doc
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param operation the async operation(s) to perform on the document while it's locked
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @param r Json reader
+   * @param w Json writer
+   * @tparam T type of the doc
+   * @return the document
+   */
+  def atomicallyUpdate[T](key: String, exp: CouchbaseExpirationTiming, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    performAtomicUpdate(key, Some(exp), persistTo, replicateTo)(operation)(bucket, ec, r, w)
+  }
+
+  private[reactivecouchbase] def performAtomicUpdate[T](key: String, exp: Option[CouchbaseExpirationTiming], persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     implicit val timeout = Timeout(8 minutes)
-    val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1)
+    val ar = AtomicRequest[T](key, operation, bucket, this, r, w, ec, 1, persistTo, replicateTo, exp)
     val atomic_actor = bucket.driver.system().actorOf(AtomicActor.props[T])
     atomic_actor ! LoggerHolder(bucket.driver.logger)
     atomic_actor.ask(ar).flatMap {
@@ -196,6 +224,8 @@ trait Atomic {
    *
    * @param key the key of the document
    * @param operation the operation(s) to perform on the document while it's locked
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
    * @param bucket the bucket to use
    * @param ec ExecutionContext for async processing
    * @param r Json reader
@@ -203,8 +233,28 @@ trait Atomic {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicUpdate[T](key: String, operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
-    atomicallyUpdate(key)((arg: T) => Future(operation(arg)))(bucket, ec, r, w) 
+  def atomicUpdate[T](key: String, operation: T => T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    performAtomicUpdate(key, None, persistTo, replicateTo)((arg: T) => Future(operation(arg)))(bucket, ec, r, w)
+  }
+
+  /**
+   *
+   * Atomically perform operation(s) on a document while it's locked
+   *
+   * @param key the key of the document
+   * @param exp expiration of the doc
+   * @param operation the operation(s) to perform on the document while it's locked
+   * @param persistTo persistence flag
+   * @param replicateTo replication flag
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @param r Json reader
+   * @param w Json writer
+   * @tparam T type of the doc
+   * @return the document
+   */
+  def atomicUpdate[T](key: String, exp: CouchbaseExpirationTiming, operation: T => T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    performAtomicUpdate(key, Some(exp), persistTo, replicateTo)((arg: T) => Future(operation(arg)))(bucket, ec, r, w)
   }
 
 }

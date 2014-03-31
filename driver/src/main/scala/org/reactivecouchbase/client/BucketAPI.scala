@@ -897,8 +897,8 @@ trait BucketAPI {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicUpdate[T](key: String, operation: T => T)(implicit ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
-    Couchbase.atomicUpdate[T](key, operation)(self, ec, r, w)
+  def atomicUpdate[T](key: String, operation: T => T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    Couchbase.atomicUpdate[T](key, operation, persistTo, replicateTo)(self, ec, r, w)
   }
 
   /**
@@ -913,7 +913,16 @@ trait BucketAPI {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicallyUpdate[T](key: String)(operation: T => Future[T])(implicit ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
-    Couchbase.atomicallyUpdate[T](key)(operation)(self, ec, r, w)
+  def atomicallyUpdate[T](key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    Couchbase.atomicallyUpdate[T](key, persistTo, replicateTo)(operation)(self, ec, r, w)
   }
+
+  def atomicallyUpdate[T](key: String, exp: CouchbaseExpirationTiming, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    Couchbase.atomicallyUpdate[T](key, exp, persistTo, replicateTo)(operation)(self, ec, r, w)
+  }
+
+  def atomicUpdate[T](key: String, exp: CouchbaseExpirationTiming, operation: T => T, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+    Couchbase.atomicUpdate[T](key, exp, operation, persistTo, replicateTo)(self, ec, r, w)
+  }
+
 }
