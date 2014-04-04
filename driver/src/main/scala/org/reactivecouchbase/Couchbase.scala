@@ -236,7 +236,7 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
    * @param reaper activate reaper to delete elements when the capped bucket is full (ie. bigger than max)
    * @return a capped bucket
    */
-  def cappedBucket(name: String, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), bucket(name).driver.executor(), max, reaper)
+  def cappedBucket(name: String, max: Int, reaper: Boolean): CappedBucket = CappedBucket(() => bucket(name), bucket(name).driver.executor(), max, reaper)
 
   /**
    *
@@ -249,7 +249,7 @@ class ReactiveCouchbaseDriver(as: ActorSystem, config: Configuration, log: Logge
    * @param reaper activate reaper to delete elements when the capped bucket is full (ie. bigger than max)
    * @return a capped bucket
    */
-  def cappedBucket(name: String, ec: ExecutionContext, max: Int, reaper: Boolean): CappedBucket = CappedBucket(bucket(name), ec, max, reaper)
+  def cappedBucket(name: String, ec: ExecutionContext, max: Int, reaper: Boolean): CappedBucket = CappedBucket(() => bucket(name), ec, max, reaper)
 
   /**
    *

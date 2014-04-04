@@ -1,17 +1,17 @@
 package org.reactivecouchbase.experimental
 
 import org.reactivecouchbase._
-import com.couchbase.client.protocol.views.{Stale, Query}
+import com.couchbase.client.protocol.views.{ComplexKey, Stale, Query}
 import play.api.libs.json._
 import scala.concurrent.{Await, Future, ExecutionContext}
-import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
+import java.util.concurrent.{ConcurrentLinkedQueue, ConcurrentHashMap, TimeUnit}
 import play.api.libs.iteratee.{Enumeratee, Enumerator}
 import net.spy.memcached.{ReplicateTo, PersistTo}
 import scala.concurrent.duration.Duration
 import org.reactivecouchbase.CouchbaseExpiration._
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsObject
 import org.reactivecouchbase.client.{OpResult, Constants}
+import scala.Some
+import play.api.libs.json.JsObject
 
 object CappedBucket {
   //private[reactivecouchbase] val buckets = new ConcurrentHashMap[String, CappedBucket]()
@@ -19,16 +19,16 @@ object CappedBucket {
   private def viewName = "byNaturalOrder"
   private def cappedRef = "__playcbcapped"
   private def cappedNaturalId = "__playcbcappednatural"
-  private def designDocOld =
-    s"""
-      {
-        "views":{
-           "byNaturalOrder": {
-               "map": "function (doc, meta) { if (doc.$cappedRef) { if (doc.$cappedNaturalId) { emit(doc.$cappedNaturalId, null); } } } "
-           }
-        }
-      }
-    """
+  //private def designDocOld =
+  //  s"""
+  //    {
+  //      "views":{
+  //         "byNaturalOrder": {
+  //             "map": "function (doc, meta) { if (doc.$cappedRef) { if (doc.$cappedNaturalId) { emit(doc.$cappedNaturalId, null); } } } "
+  //         }
+  //      }
+  //    }
+  //  """
 
   private def designDoc = Json.obj(
     "views" -> Json.obj(
@@ -68,7 +68,7 @@ object CappedBucket {
    * @param reaper trigger reaper to kill elements after max
    * @return the capped bucket
    */
-  def apply(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int = 500, reaper: Boolean = false) = {
+  def apply(bucket: () => CouchbaseBucket, ec: ExecutionContext, max: Int = 500, reaper: Boolean = false) = {
     //if (!buckets.containsKey(bucket.alias)) {
     //  buckets.putIfAbsent(bucket.alias, new CappedBucket(bucket, ec, max, reaper))
     //}
@@ -119,14 +119,14 @@ object CappedBucket {
  * @param max max elements in the bucket
  * @param reaper enable reaper to remove old elements
  */
-class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = false) {
+class CappedBucket(bucket: () => CouchbaseBucket, ec: ExecutionContext, max: Int, reaper: Boolean = false) {
 
   //if (!CappedBucket.triggerPromise.isCompleted) CappedBucket.setupViews(bucket, ec)
   //if (reaper) CappedBucket.enabledReaper(bucket, max, ec)
 
-  if (!CappedBucket.views.containsKey(bucket.alias)) {
-    Await.result(CappedBucket.setupViews(bucket, ec), Duration(10, TimeUnit.SECONDS)) // I know that's ugly
-    CappedBucket.views.put(bucket.alias, true)
+  if (!CappedBucket.views.containsKey(bucket().alias)) {
+    Await.result(CappedBucket.setupViews(bucket(), ec), Duration(10, TimeUnit.SECONDS)) // I know that's ugly
+    CappedBucket.views.put(bucket().alias, true)
   }
 
   /**
@@ -140,7 +140,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    */
   def oldestOption[T](implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(false).setLimit(1)
-    CappedBucket.trigger(bucket).flatMap(_ => Couchbase.find[T](CappedBucket.docName, CappedBucket.viewName)(query)(bucket, r, ec).map(_.headOption))
+    CappedBucket.trigger(bucket()).flatMap(_ => Couchbase.find[T](CappedBucket.docName, CappedBucket.viewName)(query)(bucket(), r, ec).map(_.headOption))
   }
 
   /**
@@ -154,7 +154,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    */
   def lastInsertedOption[T](implicit r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     val query = new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(true).setLimit(1)
-    CappedBucket.trigger(bucket).flatMap(_ => Couchbase.find[T](CappedBucket.docName, CappedBucket.viewName)(query)(bucket, r, ec).map(_.headOption))
+    CappedBucket.trigger(bucket()).flatMap(_ => Couchbase.find[T](CappedBucket.docName, CappedBucket.viewName)(query)(bucket(), r, ec).map(_.headOption))
   }
 
   /**
@@ -170,14 +170,14 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
    * @tparam T type of the doc
    * @return
    */
-  def tail[T](from: Long = 0L, every: Long = 200, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit r: Reads[T], ec: ExecutionContext): Future[Enumerator[T]] = {
-    CappedBucket.trigger(bucket).map( _ => Couchbase.tailableQuery[JsObject](CappedBucket.docName, CappedBucket.viewName, { obj =>
+  def tail[T](from: Long = 0L, every: Long = 200, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit r: Reads[T], ec: ExecutionContext): Enumerator[T]= {
+    Enumerator.flatten(CappedBucket.trigger(bucket()).map( _ => Couchbase.tailableQuery[JsObject](CappedBucket.docName, CappedBucket.viewName, { obj =>
       (obj \ CappedBucket.cappedNaturalId).as[Long]
     }, from, every, unit)(bucket, CouchbaseRWImplicits.documentAsJsObjectReader, ec).through(Enumeratee.map { elem =>
        r.reads(elem.asInstanceOf[JsValue])
     }).through(Enumeratee.collect {
       case JsSuccess(elem, _) => elem
-    }))
+    })))
   }
 
   /**
@@ -197,7 +197,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
   def insert[T](key: String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     val jsObj = w.writes(value).as[JsObject]
     val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
-    CappedBucket.trigger(bucket).flatMap(_ => Couchbase.set[JsObject](key, enhancedJsObj, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
+    CappedBucket.trigger(bucket()).flatMap(_ => Couchbase.set[JsObject](key, enhancedJsObj, exp, persistTo, replicateTo)(bucket(), CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
   }
 
   /**
@@ -217,7 +217,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
   def insertWithKey[T](key: T => String, value: T, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(implicit w: Writes[T], ec: ExecutionContext):  Future[OpResult] = {
     val jsObj = w.writes(value).as[JsObject]
     val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
-    CappedBucket.trigger(bucket).flatMap(_ => Couchbase.setWithKey[JsObject]({ _ => key(value)}, enhancedJsObj, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
+    CappedBucket.trigger(bucket()).flatMap(_ => Couchbase.setWithKey[JsObject]({ _ => key(value)}, enhancedJsObj, exp, persistTo, replicateTo)(bucket(), CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
   }
 
   /**
@@ -239,7 +239,7 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
       val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
       (elem._1, enhancedJsObj)
     })
-    CappedBucket.trigger(bucket).flatMap(_ => Couchbase.setStream[JsObject](enhancedEnumerator, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
+    CappedBucket.trigger(bucket()).flatMap(_ => Couchbase.setStream[JsObject](enhancedEnumerator, exp, persistTo, replicateTo)(bucket(), CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
   }
 
   /**
@@ -262,6 +262,6 @@ class CappedBucket(bucket: CouchbaseBucket, ec: ExecutionContext, max: Int, reap
       val enhancedJsObj = jsObj ++ Json.obj(CappedBucket.cappedRef -> true, CappedBucket.cappedNaturalId -> System.currentTimeMillis())
       (key(elem), enhancedJsObj)
     })
-    CappedBucket.trigger(bucket).flatMap(_ => Couchbase.setStream[JsObject](enhancedEnumerator, exp, persistTo, replicateTo)(bucket, CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
+    CappedBucket.trigger(bucket()).flatMap(_ => Couchbase.setStream[JsObject](enhancedEnumerator, exp, persistTo, replicateTo)(bucket(), CouchbaseRWImplicits.jsObjectToDocumentWriter, ec))
   }
 }

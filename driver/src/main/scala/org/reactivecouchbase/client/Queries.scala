@@ -2,17 +2,16 @@ package org.reactivecouchbase.client
 
 import play.api.libs.json._
 import scala.concurrent.{ExecutionContext, Future}
-import play.api.libs.iteratee.{Enumeratee, Iteratee, Concurrent, Enumerator}
+import play.api.libs.iteratee.{Enumeratee, Iteratee, Enumerator}
 import com.couchbase.client.protocol.views._
 import org.reactivecouchbase.{Timeout, Couchbase, CouchbaseBucket}
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ConcurrentLinkedQueue, TimeUnit}
 import org.reactivecouchbase.client.CouchbaseFutures._
-import net.spy.memcached.ops.OperationStatus
 import collection.JavaConversions._
+import org.reactivecouchbase.experimental.Views
 import play.api.libs.json.JsSuccess
 import scala.Some
 import play.api.libs.json.JsObject
-import org.reactivecouchbase.experimental.Views
 
 /**
  *
@@ -292,18 +291,36 @@ trait Queries {
    * @tparam T type of the doc
    * @return the query enumerator
    */
-  def tailableQuery[T](doc: String, view: String, extractor: T => Long, from: Long = 0L, every: Long = 1000L, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
-    var last = from
-    def query() = {
-      new Query().setIncludeDocs(true).setStale(Stale.FALSE).setDescending(false).setRangeStart(ComplexKey.of(last.asInstanceOf[AnyRef])).setRangeEnd(ComplexKey.of(Long.MaxValue.asInstanceOf[AnyRef]))
+  def tailableQuery[T](doc: String, view: String, extractor: T => Long, from: Long = 0L, every: Long = 1000L, unit: TimeUnit = TimeUnit.MILLISECONDS)(implicit bucket: () => CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Enumerator[T] = {
+    var last = System.currentTimeMillis()
+    def query() = new Query()
+      .setIncludeDocs(true)
+      .setStale(Stale.FALSE)
+      .setDescending(false)
+      .setRangeStart(ComplexKey.of(last.asInstanceOf[AnyRef]))
+      .setRangeEnd(ComplexKey.of(Long.MaxValue.asInstanceOf[AnyRef]))
+
+    def step(list: ConcurrentLinkedQueue[T]): Future[Option[(ConcurrentLinkedQueue[T], T)]] = {
+      Couchbase.find[T](doc, view)(query())(bucket(), r, ec).map { res =>
+        res.foreach { doc =>
+          last = extractor(doc) + 1L
+          list.offer(doc)
+        }
+      }.flatMap { _ =>
+        list.poll() match {
+          case null => Timeout.timeout("", every, unit, bucket().driver.scheduler()).flatMap(_ => step(list))
+          case e => Future.successful(Some((list, e)))
+        }
+      }
     }
-    Enumerator.repeatM({
-      val actualQuery = query()
-      Timeout.timeout(Some, every, unit, bucket.driver.scheduler()).flatMap(_ => Couchbase.find[T](doc, view)(actualQuery)(bucket, r, ec))
-    }).through( Enumeratee.mapConcat[List[T]](identity) ).through( Enumeratee.filter[T]( _ => true ) ).through(Enumeratee.map { elem =>
-      last = extractor(elem) + 1L
-      elem
-    })
+    Enumerator.unfoldM(new ConcurrentLinkedQueue[T]()) { list =>
+      if (list.isEmpty) {
+        step(list)
+      } else {
+        val el = list.poll()
+        Future.successful(Some((list, el)))
+      }
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
