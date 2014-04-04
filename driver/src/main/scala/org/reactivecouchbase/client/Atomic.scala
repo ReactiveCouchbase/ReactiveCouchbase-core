@@ -21,7 +21,7 @@ import org.reactivecouchbase.CouchbaseExpiration._
 
 private[reactivecouchbase] case class AtomicRequest[T](key: String, operation: T => Future[T], bucket: CouchbaseBucket, atomic: Atomic, r: Reads[T], w: Writes[T], ec: ExecutionContext, numberTry: Int, persistTo: PersistTo, replicateTo: ReplicateTo, expiration: Option[CouchbaseExpirationTiming])
 
-private[reactivecouchbase] case class AtomicSucess[T](key: String, payload: T)
+private[reactivecouchbase] case class AtomicSuccess[T](key: String, payload: T)
 private[reactivecouchbase] case class LoggerHolder(logger: LoggerLike)
 
 case class AtomicError[T](request: AtomicRequest[T], message: String) extends ControlThrowable
@@ -69,7 +69,7 @@ private[reactivecouchbase] class AtomicActor[T] extends Actor {
                 // reply to sender it's OK
               res match {
                 case CASResponse.OK => {
-                  sen ! Future.successful(AtomicSucess[T](ar.key, nv))
+                  sen ! Future.successful(AtomicSuccess[T](ar.key, nv))
                   self ! PoisonPill
                 }
                 case CASResponse.NOT_FOUND => {
@@ -213,7 +213,7 @@ trait Atomic {
       case f: Future[_] => f
       case other => Future.successful(other)
     }.map {
-      case AtomicSucess(_, something) => something
+      case AtomicSuccess(_, something) => something
       case other => other
     }.map(_.asInstanceOf[T])
   }
