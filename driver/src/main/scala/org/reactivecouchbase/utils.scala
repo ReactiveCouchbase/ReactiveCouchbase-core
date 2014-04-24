@@ -8,7 +8,7 @@ import com.typesafe.config._
 import scala.util.control.NonFatal
 import scala.concurrent.{ ExecutionContextExecutorService, ExecutionContext }
 import java.util.Collections
-import java.util.concurrent.{AbstractExecutorService, TimeUnit}
+import java.util.concurrent.{LinkedBlockingDeque, AbstractExecutorService, TimeUnit}
 
 /**
  * Trait to wrap Logger
@@ -243,4 +243,48 @@ object ExecutionContextExecutorServiceBridge {
       override def awaitTermination(length: Long, unit: TimeUnit): Boolean = false
     }
   }
+}
+
+import akka.actor.Actor
+
+private case class FutureDone()
+
+trait Indexer extends Actor {
+
+  import context.become
+  import scala.concurrent.ExecutionContext.Implicits.global // not so good ...
+
+  type ReceiveAsync = PartialFunction[Any, Future[_]]
+
+  var currentMessage: Any = _
+
+  def receiveAsync: ReceiveAsync
+
+  def activeLoop: Receive = {
+    case msg if receiveAsync.isDefinedAt(msg) => {
+      val ref = self
+      receiveAsync(msg).onComplete {
+        case _ => ref ! FutureDone()
+      }
+      become(waitingLoop)
+    }
+  }
+
+  val waitingMessages = new LinkedBlockingDeque[AnyRef]()
+
+  def waitingLoop: Receive = {
+    case FutureDone() => {
+      val ref = self
+      while( !waitingMessages.isEmpty ) {
+        waitingMessages.pollFirst() match {
+          case message => ref ! message
+          case null =>
+        }
+      }
+      become(activeLoop)
+    }
+    case message: AnyRef => waitingMessages.offerLast(message)
+  }
+
+  def receive = activeLoop
 }
