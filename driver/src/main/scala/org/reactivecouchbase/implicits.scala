@@ -4,6 +4,7 @@ import scala.util.control.NoStackTrace
 import scala.concurrent._
 import play.api.libs.json._
 import scala.util.Try
+import java.util.concurrent.Executors
 
 package object flatfutures {
 
@@ -117,6 +118,8 @@ package object json {
 }
 
 package object debug {
+
+  private implicit val debugEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors()))
 
   implicit final class debugKCombinatorAny[A](a: A) {
     def combine(sideEffect: A => Unit): A = { sideEffect(a); a }
