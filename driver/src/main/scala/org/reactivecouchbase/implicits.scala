@@ -61,7 +61,7 @@ package object options {
 
 package object json {
 
-  implicit final class LilaPimpedJsObject(js: JsObject) {
+  implicit final class enhancedJsObject(js: JsObject) {
 
     def str(key: String): Option[String] =
       (js \ key).asOpt[String]
@@ -88,7 +88,7 @@ package object json {
     }
   }
 
-  implicit final class LilaPimpedJsValue(js: JsValue) {
+  implicit final class enhancedJsValue(js: JsValue) {
 
     def str(key: String): Option[String] =
       js.asOpt[JsObject] flatMap { obj =>
@@ -121,7 +121,7 @@ package object debug {
 
   private implicit val debugEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors()))
 
-  implicit final class debugKCombinatorAny[A](a: A) {
+  implicit final class kcombine[A](a: A) {
     def combine(sideEffect: A => Unit): A = { sideEffect(a); a }
     def debug: A = debug(_ => s"$a")
     def debug(out: A => String): A = {
@@ -130,7 +130,7 @@ package object debug {
     }
   }
 
-  implicit final class debugKCombinatorFutureAny[A](fua: Future[A]) {
+  implicit final class futureKcombine[A](fua: Future[A]) {
     def thenCombine(sideEffect: Try[A] => Unit): Future[A] = {
       fua onComplete { case result => result.combine(sideEffect) }
       fua

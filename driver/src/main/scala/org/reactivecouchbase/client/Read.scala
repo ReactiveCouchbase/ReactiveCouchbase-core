@@ -143,17 +143,13 @@ trait Read {
    */
   def get[T](key: String)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ) map {
-      case doc: String => r.reads(Json.parse(doc))
-      case _ =>
-    } map {
-      case JsSuccess(value, _) => value
-      case JsError(errors) if bucket.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
-      case _ =>
-    } map {
-      case value: T => Some[T](value)
+      case doc: String => Some(r.reads(Json.parse(doc)))
       case _ => None
+    } map {
+      case Some(JsSuccess(value, _)) => Some(value)
+      case Some(JsError(errors)) if bucket.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
+      case None => None
     }
-//    fetchValues[T](Enumerator(key))(bucket, r, ec).headOption(ec)
   }
 
   /**
