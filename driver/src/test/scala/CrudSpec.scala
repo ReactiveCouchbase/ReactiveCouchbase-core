@@ -159,6 +159,15 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
       success
     }
 
+    "fail on non string doc" in {
+      val key = "nonString"
+      bucket.couchbaseClient.set(key, 0)
+      val fut = bucket.get[Person](key)
+      Await.result(fut, timeout) must beNone
+      Await.result(bucket.delete(key), timeout)
+      success
+    }
+
     "update some data" in {
       val expectedPerson = Person("Jane", "Doe", 42)
       val fut = bucket.replace[Person]("person-key1", expectedPerson).map { status =>

@@ -79,7 +79,7 @@ trait JavaApi { self: Queries =>
   def javaGet(key: String, bucket: CouchbaseBucket, ec: ExecutionContext): Future[String] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case s: String => Future.successful(s)
-      case _ => Future.failed(new NullPointerException)
+      case _ => Future.failed(new IllegalStateException(s"Nothing found for key : $key"))
     }(ec)
   }
 

@@ -9,6 +9,28 @@ import org.reactivecouchbase.client.CouchbaseFutures._
  */
 trait Counters {
 
+  def getInt(key: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Int] = {
+    waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ) flatMap {
+      case i: java.lang.Integer => Future.successful(i.toInt)
+      case _ => Future.failed(new IllegalStateException("Value isn't an int"))
+    }
+  }
+
+  def getLong(key: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Long] = {
+    waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ) flatMap {
+      case i: java.lang.Long => Future.successful(i.toLong)
+      case _ => Future.failed(new IllegalStateException("Value isn't a long"))
+    }
+  }
+
+  def setInt(key: String, value: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.set(key, value: java.lang.Integer), bucket, ec).map(OpResult(_, 1))
+  }
+
+  def setLong(key: String, value: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.set(key, value: java.lang.Long), bucket, ec).map(OpResult(_, 1))
+  }
+
   /**
    *
    * Increment an Int
@@ -20,7 +42,7 @@ trait Counters {
    * @return
    */
   def incr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec ).map(OpResult(_, 1))
+    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by: java.lang.Integer), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -34,7 +56,7 @@ trait Counters {
    * @return
    */
   def incr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by), bucket, ec ).map(OpResult(_, 1))
+    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by: java.lang.Long), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -48,7 +70,7 @@ trait Counters {
    * @return
    */
   def decr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec ).map(OpResult(_, 1))
+    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by: java.lang.Integer), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -62,7 +84,7 @@ trait Counters {
    * @return
    */
   def decr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by), bucket, ec ).map(OpResult(_, 1))
+    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by: java.lang.Long), bucket, ec ).map(OpResult(_, 1))
   }
 
   /**
@@ -76,7 +98,7 @@ trait Counters {
    * @return
    */
   def incrAndGet(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Int] = {
-    Future[Long]( bucket.couchbaseClient.incr(key, by) )(ec).map(_.toInt)
+    incr(key, by)(bucket, ec).flatMap(_ => getInt(key)(bucket, ec))
   }
 
   /**
@@ -90,7 +112,7 @@ trait Counters {
    * @return
    */
   def incrAndGet(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Long] = {
-    Future[Long]( bucket.couchbaseClient.incr(key, by) )(ec)
+    incr(key, by)(bucket, ec).flatMap(_ => getLong(key)(bucket, ec))
   }
 
   /**
@@ -104,7 +126,7 @@ trait Counters {
    * @return
    */
   def decrAndGet(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Int] = {
-    Future[Long]( bucket.couchbaseClient.decr(key, by) )(ec).map(_.toInt)
+    decr(key, by)(bucket, ec).flatMap(_ => getInt(key)(bucket, ec))
   }
 
   /**
@@ -118,6 +140,6 @@ trait Counters {
    * @return
    */
   def decrAndGet(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Long] = {
-    Future[Long]( bucket.couchbaseClient.decr(key, by) )(ec)
+    decr(key, by)(bucket, ec).flatMap(_ => getLong(key)(bucket, ec))
   }
 }

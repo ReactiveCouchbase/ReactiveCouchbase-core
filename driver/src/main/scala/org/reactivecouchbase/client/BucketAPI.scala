@@ -12,6 +12,11 @@ import net.spy.memcached.CASValue
 import org.reactivecouchbase.CouchbaseExpiration._
 import scala.Some
 import play.api.libs.json.JsObject
+import org.reactivecouchbase.client.CouchbaseFutures._
+import org.reactivecouchbase.client.TypedRow
+import org.reactivecouchbase.client.RawRow
+import scala.Some
+import play.api.libs.json.JsObject
 
 /**
  * Trait containing the whole ReactiveCouchbase API to put on CouchbaseBucket
@@ -381,6 +386,14 @@ trait BucketAPI {
       case _ => None
     }
   }
+
+  def getInt(key: String)(implicit ec: ExecutionContext): Future[Int] = Couchbase.getInt(key)(self, ec)
+
+  def getLong(key: String)(implicit ec: ExecutionContext): Future[Long] = Couchbase.getLong(key)(self, ec)
+
+  def setInt(key: String, value: Int)(implicit ec: ExecutionContext): Future[OpResult] = Couchbase.setInt(key, value)(self, ec)
+
+  def setLong(key: String, value: Long)(implicit ec: ExecutionContext): Future[OpResult] = Couchbase.setLong(key, value)(self, ec)
 
   /**
    *
