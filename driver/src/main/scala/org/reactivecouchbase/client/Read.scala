@@ -153,7 +153,7 @@ trait Read {
       case value: T => Some[T](value)
       case _ => None
     }
-    fetchValues[T](Enumerator(key))(bucket, r, ec).headOption(ec)
+//    fetchValues[T](Enumerator(key))(bucket, r, ec).headOption(ec)
   }
 
   /**
