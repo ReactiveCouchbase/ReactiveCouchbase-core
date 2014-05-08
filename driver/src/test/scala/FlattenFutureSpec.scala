@@ -43,7 +43,7 @@ class FlattenFutureSpec extends Specification with Tags {
     }(successIfSuccess("Hello"))
 
     "Success if future of some with transformation".in {
-      successfulFuture.flatten(_.toUpperCase, "Goobdye")
+      successfulFuture.flatten(_.toUpperCase)("Goobdye")
     }(successIfSuccess("HELLO"))
 
     "Success if future of some with monadic transformation".in {

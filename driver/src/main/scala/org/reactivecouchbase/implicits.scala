@@ -35,7 +35,7 @@ package object flatfutures {
         case None => none
       }
     }
-    def flatten[O](some: A => O, none: => O)(implicit ec: ExecutionContext): Future[O] = {
+    def flatten[O](some: A => O)(none: => O)(implicit ec: ExecutionContext): Future[O] = {
       future.flatMap {
         case Some(something) => Future.successful(some(something))
         case None => Future.successful(none)
