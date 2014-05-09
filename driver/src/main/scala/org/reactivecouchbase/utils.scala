@@ -251,27 +251,21 @@ private case class FutureDone()
 
 trait FutureAwareActor extends Actor {
 
-  import context.become
+  private val internalEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
-  type ReceiveAsync = PartialFunction[Any, Future[_]]
-
-  val internalEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
-
-  def receiveAsync: ReceiveAsync
-
-  def activeLoop: Receive = {
+  private def activeLoop: Receive = {
     case msg if receiveAsync.isDefinedAt(msg) => {
       val ref = self
       receiveAsync(msg).onComplete {
         case _ => ref ! FutureDone()
       }(internalEc)
-      become(waitingLoop)
+      context.become(waitingLoop)
     }
   }
 
-  val waitingMessages = new LinkedBlockingDeque[AnyRef]()
+  private val waitingMessages = new LinkedBlockingDeque[AnyRef]()
 
-  def waitingLoop: Receive = {
+  private def waitingLoop: Receive = {
     case FutureDone() => {
       val ref = self
       while( !waitingMessages.isEmpty ) {
@@ -280,10 +274,14 @@ trait FutureAwareActor extends Actor {
           case message => ref ! message
         }
       }
-      become(activeLoop)
+      context.become(activeLoop)
     }
     case message: AnyRef => waitingMessages.offerLast(message)
   }
+
+  type ReceiveAsync = PartialFunction[Any, Future[_]]
+
+  def receiveAsync: ReceiveAsync
 
   def receive = activeLoop
 }
