@@ -79,7 +79,8 @@ trait JavaApi { self: Queries =>
   def javaGet(key: String, bucket: CouchbaseBucket, ec: ExecutionContext): Future[String] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case s: String => Future.successful(s)
-      case _ => Future.failed(new IllegalStateException(s"Nothing found for key : $key"))
+      case null => Future.failed(new IllegalStateException(s"Nothing found for key : $key"))
+      case _ => Future.failed(new IllegalStateException(s"Document $key is not a string ..."))
     }(ec)
   }
 
@@ -97,7 +98,8 @@ trait JavaApi { self: Queries =>
   def javaGet[T](key: String, clazz: Class[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).flatMap {
       case value: String => Future.successful(play.libs.Json.fromJson(play.libs.Json.parse(value), clazz))
-      case _ => Future.failed(new IllegalStateException(s"Nothing found for key : $key"))
+      case null => Future.failed(new IllegalStateException(s"Nothing found for key : $key"))
+      case _ => Future.failed(new IllegalStateException(s"Document $key is not a string"))
     }(ec)
   }
 
@@ -116,7 +118,8 @@ trait JavaApi { self: Queries =>
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ).map { f =>
       val opt: java.util.List[T] = f match {
         case value: String => java.util.Collections.singletonList(play.libs.Json.fromJson(play.libs.Json.parse(value), clazz))
-        case _ => java.util.Collections.emptyList()
+        case null => java.util.Collections.emptyList()
+        case _ => if (bucket.failWithNonStringDoc) throw new IllegalStateException(s"Document $key is not a string") else java.util.Collections.emptyList()
       }
       opt
     }(ec)

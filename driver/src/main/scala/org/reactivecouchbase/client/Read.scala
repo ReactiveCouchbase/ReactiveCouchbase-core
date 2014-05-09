@@ -58,7 +58,10 @@ trait Read {
       waitForBulkRaw( bucket.couchbaseClient.asyncGetBulk(keys), bucket, ec ).map { results =>
         Enumerator.enumerate(results.toList)
       }.map { enumerator =>
-        enumerator &> Enumeratee.collect[(String, AnyRef)] { case (k: String, v: String) => (k, v) }
+        enumerator &> Enumeratee.collect[(String, AnyRef)] {
+          case (k: String, v: String) => (k, v)
+          case (k: String, v: AnyRef) if bucket.failWithNonStringDoc => throw new IllegalStateException(s"Document $k is not a String")
+        }
       }
     })
   }
@@ -144,7 +147,9 @@ trait Read {
   def get[T](key: String)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Option[T]] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ) map {
       case doc: String => Some(r.reads(Json.parse(doc)))
-      case _ => None
+      case null => None
+      case _ if bucket.failWithNonStringDoc => throw new IllegalStateException(s"Document '$key' is not a string ...")
+      case _ if !bucket.failWithNonStringDoc => None
     } map {
       case Some(JsSuccess(value, _)) => Some(value)
       case Some(JsError(errors)) if bucket.jsonStrictValidation => throw new JsonValidationException("Invalid JSON content", JsError.toFlatJson(errors))
@@ -165,7 +170,6 @@ trait Read {
    */
   def getWithKey[T](key: String)(implicit bucket: CouchbaseBucket, r: Reads[T], ec: ExecutionContext): Future[Option[(String, T)]] = {
     get[T](key)(bucket, r, ec).map(_.map( doc => (key, doc)))
-    //fetch[T](Enumerator(key))(bucket, r, ec).headOption(ec)
   }
 
   /**

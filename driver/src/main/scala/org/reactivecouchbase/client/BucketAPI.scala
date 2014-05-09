@@ -4,17 +4,11 @@ import play.api.libs.json._
 import scala.concurrent.{ Future, ExecutionContext }
 import com.couchbase.client.protocol.views.{ DesignDocument, SpatialView, View, Query }
 import play.api.libs.iteratee.Enumerator
-import net.spy.memcached.ops.OperationStatus
 import net.spy.memcached.{ PersistTo, ReplicateTo }
 import org.reactivecouchbase.{ Couchbase, CouchbaseBucket }
 import java.util.concurrent.TimeUnit
 import net.spy.memcached.CASValue
 import org.reactivecouchbase.CouchbaseExpiration._
-import scala.Some
-import play.api.libs.json.JsObject
-import org.reactivecouchbase.client.CouchbaseFutures._
-import org.reactivecouchbase.client.TypedRow
-import org.reactivecouchbase.client.RawRow
 import scala.Some
 import play.api.libs.json.JsObject
 

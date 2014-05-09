@@ -163,7 +163,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
       val key = "nonString"
       bucket.couchbaseClient.set(key, 0)
       val fut = bucket.get[Person](key)
-      Await.result(fut, timeout) must beNone
+      Await.result(fut, timeout) must beNone //throwAn[IllegalStateException]
       Await.result(bucket.delete(key), timeout)
       success
     }

@@ -106,6 +106,8 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
    */
   private[reactivecouchbase] val failWithOpStatus = cbDriver.configuration.getBoolean("couchbase.failfutures").getOrElse(false)
 
+  private[reactivecouchbase] val failWithNonStringDoc = cbDriver.configuration.getBoolean("couchbase.failonnonstring").getOrElse(false)
+
   /**
    * Timeout
    */
