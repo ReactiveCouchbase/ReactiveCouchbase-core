@@ -61,7 +61,7 @@ package object options {
 
 package object json {
 
-  implicit final class enhancedJsObject(js: JsObject) {
+  implicit final class EnhancedJsObject(js: JsObject) {
 
     def str(key: String): Option[String] =
       (js \ key).asOpt[String]
@@ -88,7 +88,7 @@ package object json {
     }
   }
 
-  implicit final class enhancedJsValue(js: JsValue) {
+  implicit final class EnhancedJsValue(js: JsValue) {
 
     def str(key: String): Option[String] =
       js.asOpt[JsObject] flatMap { obj =>
@@ -119,11 +119,9 @@ package object json {
 
 package object debug {
 
-  private implicit val debugEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors()))
-
   implicit final class kcombine[A](a: A) {
     def combine(sideEffect: A => Unit): A = { sideEffect(a); a }
-    def debug: A = debug(_ => s"$a")
+    def debug: A = debug(_ => s"[K-DEBUG] $a")
     def debug(out: A => String): A = {
       println(out(a))
       a
@@ -131,15 +129,15 @@ package object debug {
   }
 
   implicit final class futureKcombine[A](fua: Future[A]) {
-    def thenCombine(sideEffect: Try[A] => Unit): Future[A] = {
+    def thenCombine(sideEffect: Try[A] => Unit)(implicit ec: ExecutionContext): Future[A] = {
       fua onComplete { case result => result.combine(sideEffect) }
       fua
     }
-    def thenDebug(out: Try[A] => String): Future[A] = {
+    def thenDebug(out: Try[A] => String)(implicit ec: ExecutionContext): Future[A] = {
       fua onComplete { case result => result.debug(out) }
       fua
     }
-    def thenDebug: Future[A] = {
+    def thenDebug(implicit ec: ExecutionContext): Future[A] = {
       fua onComplete { case result => result.debug }
       fua
     }
