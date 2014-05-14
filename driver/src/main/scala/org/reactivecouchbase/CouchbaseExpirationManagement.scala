@@ -16,6 +16,6 @@ object CouchbaseExpiration {
 
   implicit def from_CouchbaseExpirationTiming_to_int(a: CouchbaseExpirationTiming): Int = a match {
     case i: CouchbaseExpirationTiming_byInt => i.value
-    case d: CouchbaseExpirationTiming_byDuration => if (d.value < 30.days) d.value.toSeconds.toInt else { (System.currentTimeMillis() + d.value.toMillis).toInt / 1000 }
+    case d: CouchbaseExpirationTiming_byDuration => if (d.value <= 30.days) d.value.toSeconds.toInt else ((System.currentTimeMillis() + d.value.toMillis) / 1000).toInt
   }
 }
