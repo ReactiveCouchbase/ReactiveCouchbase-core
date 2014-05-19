@@ -39,6 +39,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
 
     "shutdown now" in {
       driver.shutdown()
+      driver.shutdown()
       success
     }
   }

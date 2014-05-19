@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 import scala.concurrent.{ ExecutionContextExecutorService, ExecutionContext }
 import java.util.Collections
 import java.util.concurrent.{Executors, LinkedBlockingDeque, AbstractExecutorService, TimeUnit}
+import scala.util.Try
 
 /**
  * Trait to wrap Logger
@@ -254,29 +255,36 @@ trait FutureAwareActor extends Actor {
   private val internalEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
   private def activeLoop: Receive = {
-    case msg if receiveAsync.isDefinedAt(msg) => {
-      val ref = self
-      receiveAsync(msg).onComplete {
-        case _ => ref ! FutureDone()
-      }(internalEc)
+    case message => {
       context.become(waitingLoop)
+      processNext(message)
     }
   }
 
-  private val waitingMessages = new LinkedBlockingDeque[AnyRef]()
+  private def processNext(message: Any) = {
+    message match {
+      case msg if receiveAsync.isDefinedAt(msg) => {
+        val ref = self
+        receiveAsync(msg).onComplete {
+          case _ => ref ! FutureDone()
+        }(internalEc)
+      }
+      case _ =>
+    }
+  }
+
+  private def dequeueAnProcessNext() = {
+    Try(waitingMessages.dequeue()).toOption match {
+      case None => context.become(activeLoop)
+      case Some(message) => processNext(message)
+    }
+  }
+
+  private val waitingMessages = collection.mutable.Queue[Any]()
 
   private def waitingLoop: Receive = {
-    case FutureDone() => {
-      val ref = self
-      while( !waitingMessages.isEmpty ) {
-        waitingMessages.pollFirst() match {
-          case null =>
-          case message => ref ! message
-        }
-      }
-      context.become(activeLoop)
-    }
-    case message: AnyRef => waitingMessages.offerLast(message)
+    case FutureDone() => dequeueAnProcessNext()
+    case message: AnyRef => waitingMessages.enqueue(message)
   }
 
   type ReceiveAsync = PartialFunction[Any, Future[_]]
