@@ -4,7 +4,7 @@ import Keys._
 object ApplicationBuild extends Build {
 
   val appName         = "ReactiveCouchbase-core"
-  val appVersion      = "0.2"
+  val appVersion      = "0.3-SNAPSHOT"
   val appScalaVersion = "2.10.2"
   val appScalaBinaryVersion = "2.10"
   val appScalaCrossVersions = Seq("2.10.2")
