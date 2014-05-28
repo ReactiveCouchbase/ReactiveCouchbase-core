@@ -100,7 +100,9 @@ private[reactivecouchbase] object CouchbaseFutures {
     val promise = Promise[java.util.Map[String, AnyRef]]()
     def complete(): Unit = {
       val f = future
-      if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
+      if (b.failWithOpStatus && f.getStatus == null) {
+        promise.tryFailure(new ReactiveCouchbaseException("Operation failed", "Unable to fetch last Couchbase operation status (Null value) ..."))
+      } else if (b.failWithOpStatus && (!f.getStatus.isSuccess)) {
         promise.tryFailure(new OperationFailedException(f.getStatus))
       } else {
         //if (!f.getStatus.isSuccess) b.driver.logger.error(f.getStatus.getMessage)
