@@ -14,6 +14,9 @@ import scala.util.{Failure, Success}
 import akka.pattern.after
 import scala.util.control.ControlThrowable
 import org.reactivecouchbase.CouchbaseExpiration._
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
 
 /**
  * @author Quentin ADAM - @waxzce - https://github.com/waxzce
@@ -170,25 +173,6 @@ trait Atomic {
    * Atomically perform async operation(s) on a document while it's locked
    *
    * @param key the key of the document
-   * @param persistTo persistence flag
-   * @param replicateTo replication flag
-   * @param operation the async operation(s) to perform on the document while it's locked
-   * @param bucket the bucket to use
-   * @param ec ExecutionContext for async processing
-   * @param r Json reader
-   * @param w Json writer
-   * @tparam T type of the doc
-   * @return the document
-   */
-  def atomicallyUpdate[T](key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
-    performAtomicUpdate(key, None, persistTo, replicateTo)(operation)(bucket, ec, r, w)
-  }
-
-  /**
-   *
-   * Atomically perform async operation(s) on a document while it's locked
-   *
-   * @param key the key of the document
    * @param exp expiration of the doc
    * @param persistTo persistence flag
    * @param replicateTo replication flag
@@ -200,7 +184,7 @@ trait Atomic {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicallyUpdate[T](key: String, exp: CouchbaseExpirationTiming, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+  def atomicallyUpdate[T](key: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => Future[T])(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     performAtomicUpdate(key, Some(exp), persistTo, replicateTo)(operation)(bucket, ec, r, w)
   }
 
@@ -223,25 +207,6 @@ trait Atomic {
    * Atomically perform operation(s) on a document while it's locked
    *
    * @param key the key of the document
-   * @param operation the operation(s) to perform on the document while it's locked
-   * @param persistTo persistence flag
-   * @param replicateTo replication flag
-   * @param bucket the bucket to use
-   * @param ec ExecutionContext for async processing
-   * @param r Json reader
-   * @param w Json writer
-   * @tparam T type of the doc
-   * @return the document
-   */
-  def atomicUpdate[T](key: String, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
-    performAtomicUpdate(key, None, persistTo, replicateTo)((arg: T) => Future(operation(arg)))(bucket, ec, r, w)
-  }
-
-  /**
-   *
-   * Atomically perform operation(s) on a document while it's locked
-   *
-   * @param key the key of the document
    * @param exp expiration of the doc
    * @param operation the operation(s) to perform on the document while it's locked
    * @param persistTo persistence flag
@@ -253,7 +218,7 @@ trait Atomic {
    * @tparam T type of the doc
    * @return the document
    */
-  def atomicUpdate[T](key: String, exp: CouchbaseExpirationTiming, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
+  def atomicUpdate[T](key: String, exp: CouchbaseExpirationTiming = Constants.expiration, persistTo: PersistTo = PersistTo.ZERO, replicateTo: ReplicateTo = ReplicateTo.ZERO)(operation: T => T)(implicit bucket: CouchbaseBucket, ec: ExecutionContext, r: Reads[T], w: Writes[T]): Future[T] = {
     performAtomicUpdate(key, Some(exp), persistTo, replicateTo)((arg: T) => Future(operation(arg)))(bucket, ec, r, w)
   }
 

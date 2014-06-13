@@ -5,9 +5,9 @@ object ApplicationBuild extends Build {
 
   val appName         = "ReactiveCouchbase-core"
   val appVersion      = "0.3-SNAPSHOT"
-  val appScalaVersion = "2.10.2"
-  val appScalaBinaryVersion = "2.10"
-  val appScalaCrossVersions = Seq("2.10.2")
+  val appScalaVersion = "2.11.1"
+  //val appScalaBinaryVersion = "2.10"
+  val appScalaCrossVersions = Seq("2.11.1", "2.10.4")
 
   val local: Def.Initialize[Option[sbt.Resolver]] = version { (version: String) =>
     val localPublishRepo = "./repository"
@@ -26,7 +26,7 @@ object ApplicationBuild extends Build {
 
   lazy val baseSettings = Defaults.defaultSettings ++ Seq(
     scalaVersion := appScalaVersion,
-    scalaBinaryVersion := appScalaBinaryVersion,
+    //scalaBinaryVersion := appScalaBinaryVersion,
     crossScalaVersions := appScalaCrossVersions,
     parallelExecution in Test := false
   )
@@ -44,14 +44,14 @@ object ApplicationBuild extends Build {
     .settings(baseSettings: _*)
     .settings(
       resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
-      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.4.1",
-      libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.2.0",
-      libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.2.0",
-      libraryDependencies += "com.typesafe.play" %% "play-json" % "2.2.0",
-      libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.13",
-      libraryDependencies += "com.ning" % "async-http-client" % "1.7.18",
-      libraryDependencies += "com.typesafe" % "config" % "1.0.2",
-      libraryDependencies += "org.specs2" %% "specs2" % "2.2.1" % "test",
+      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.4.2",
+      libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.3",
+      libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.3.0",
+      libraryDependencies += "com.typesafe.play" %% "play-json" % "2.3.0",
+      libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.1",
+      libraryDependencies += "com.ning" % "async-http-client" % "1.8.8",
+      libraryDependencies += "com.typesafe" % "config" % "1.2.1",
+      libraryDependencies += "org.specs2" %% "specs2" % "2.3.12" % "test",
       organization := "org.reactivecouchbase",
       version := appVersion,
       publishTo <<= local,
