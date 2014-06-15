@@ -4,11 +4,10 @@ import scala.util.control.NoStackTrace
 import scala.concurrent._
 import play.api.libs.json._
 import scala.util.Try
-import java.util.concurrent.Executors
 
 package object flatfutures {
 
-  case object EmptyOption extends RuntimeException("Current option is empty :'(") with NoStackTrace
+  object EmptyOption extends RuntimeException("Current option is empty :'(") with NoStackTrace
 
   implicit final class futureOfOptionToFuture[A](future: Future[Option[A]]) {
     def flatten(implicit ec: ExecutionContext): Future[A] = {
