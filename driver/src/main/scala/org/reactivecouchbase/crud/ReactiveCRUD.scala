@@ -7,7 +7,6 @@ import java.util.UUID
 import com.couchbase.client.protocol.views.{Query, View}
 import play.api.libs.iteratee.{Enumeratee, Iteratee, Enumerator}
 import org.reactivecouchbase.client.{OpResult, ReactiveCouchbaseException, TypedRow}
-import net.spy.memcached.ops.OperationStatus
 
 /**
  *
@@ -35,6 +34,8 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    */
   def idKey: String = "_id"
 
+  def generateId() = UUID.randomUUID().toString
+
   /**
    *
    * Insert a new document in the bucket
@@ -43,7 +44,7 @@ abstract class ReactiveCRUD[T](implicit fmt: Format[T], ctx: ExecutionContext) {
    * @return
    */
   def insert(t: T): Future[(String, OpResult)] = {
-    val id: String = UUID.randomUUID().toString
+    val id: String = generateId()
     val json = writer.writes(t).as[JsObject]
     json \ idKey match {
       case _: JsUndefined => {
