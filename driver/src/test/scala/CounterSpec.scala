@@ -33,6 +33,26 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
       success
     }
 
+
+    "be able to increment longs" in {
+      
+    	Await.result( bucket.setLong("incrementLong", 3L), timeout )
+    	Await.result( bucket.incrAndGet("incrementLong", 1L), timeout ) mustEqual 4L
+    	Await.result( bucket.delete("incrementLong"), timeout )
+    	success
+      
+    }
+    
+    "be able to increment integers" in {
+      
+    	Await.result( bucket.setInt("testkeycbint",999) , timeout )	
+    	Await.result( bucket.incrAndGet("testkeycbint", 1), timeout) mustEqual 1000
+    	Await.result( bucket.delete("testkeycbint"), timeout )
+    	success
+      
+    }
+
+
     "shutdown now" in {
       driver.shutdown()
       success
