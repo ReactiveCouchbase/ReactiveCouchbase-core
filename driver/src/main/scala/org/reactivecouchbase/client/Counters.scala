@@ -11,24 +11,24 @@ trait Counters {
 
   def getInt(key: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Int] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ) flatMap {
-      case i: java.lang.Integer => Future.successful(i.toInt)
+      case i: String => Future.successful(i.toInt)
       case _ => Future.failed(new IllegalStateException("Value isn't an int"))
     }
   }
 
   def getLong(key: String)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Long] = {
     waitForGet( bucket.couchbaseClient.asyncGet(key), bucket, ec ) flatMap {
-      case i: java.lang.Long => Future.successful(i.toLong)
+      case i: String => Future.successful(i.toLong)
       case _ => Future.failed(new IllegalStateException("Value isn't a long"))
     }
   }
 
   def setInt(key: String, value: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.set(key, value: java.lang.Integer), bucket, ec).map(OpResult(_, 1))
+    waitForOperationStatus( bucket.couchbaseClient.set(key, value.toString), bucket, ec).map(OpResult(_, 1))
   }
 
   def setLong(key: String, value: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.set(key, value: java.lang.Long), bucket, ec).map(OpResult(_, 1))
+    waitForOperationStatus( bucket.couchbaseClient.set(key, value.toString), bucket, ec).map(OpResult(_, 1))
   }
 
   /**
