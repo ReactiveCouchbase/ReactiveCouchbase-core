@@ -45,13 +45,46 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     
     "be able to increment integers" in {
       
-    	Await.result( bucket.setInt("testkeycbint",999) , timeout )	
-    	Await.result( bucket.incrAndGet("testkeycbint", 1), timeout) mustEqual 1000
-    	Await.result( bucket.delete("testkeycbint"), timeout )
+    	Await.result( bucket.setInt("incrementInt",999) , timeout )	
+    	Await.result( bucket.incrAndGet("incrementInt", 1), timeout) mustEqual 1000
+    	Await.result( bucket.delete("incrementInt"), timeout )
     	success
       
     }
 
+    "be able to decrement longs" in {
+      
+    	Await.result( bucket.setLong("decrementLong", 3L), timeout )
+    	Await.result( bucket.decrAndGet("decrementLong", 1L), timeout ) mustEqual 2L
+    	Await.result( bucket.delete("decrementLong"), timeout )
+    	success
+      
+    }
+    
+    "be able to decrement integers" in {
+      
+    	Await.result( bucket.setInt("decrementInt",999) , timeout )	
+    	Await.result( bucket.decrAndGet("decrementInt", 1), timeout) mustEqual 998
+    	Await.result( bucket.delete("decrementInt"), timeout )
+    	success
+      
+    }
+
+    "increment a non existing long key must fail" in {
+      
+    	Await.result( bucket.delete("incrementNoKey"), timeout )
+    	Await.result( bucket.incr("incrementNoKey", 1L), timeout ).isFailure must beTrue
+    	success
+      
+    }
+
+    "increment a non existing int key must fail" in {
+      
+    	Await.result( bucket.delete("incrementNoKey"), timeout )
+    	Await.result( bucket.incr("incrementNoKey", 1), timeout ).isFailure must beTrue
+    	success
+      
+    }
 
     "shutdown now" in {
       driver.shutdown()
