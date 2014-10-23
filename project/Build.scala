@@ -49,7 +49,7 @@ object ApplicationBuild extends Build {
       libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.3.0" cross CrossVersion.binary,
       libraryDependencies += "com.typesafe.play" %% "play-json" % "2.3.0" cross CrossVersion.binary,
       libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.1",
-      libraryDependencies += "com.ning" % "async-http-client" % "1.8.8",
+      libraryDependencies += "com.ning" % "async-http-client" % "1.8.14",
       libraryDependencies += "com.typesafe" % "config" % "1.2.1",
       libraryDependencies += "org.specs2" %% "specs2" % "2.3.12" % "test" cross CrossVersion.binary,
       organization := "org.reactivecouchbase",
