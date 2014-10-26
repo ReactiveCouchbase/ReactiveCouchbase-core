@@ -398,7 +398,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Int)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.incr(key, by)(self, ec)
+  def incr(key: String, by: Int)(implicit ec: ExecutionContext):  Future[Int] = Couchbase.incr(key, by)(self, ec)
 
   /**
    *
@@ -409,7 +409,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Long)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.incr(key, by)(self, ec)
+  def incr(key: String, by: Long)(implicit ec: ExecutionContext):  Future[Long] = Couchbase.incr(key, by)(self, ec)
 
   /**
    *
@@ -420,7 +420,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Int)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.decr(key, by)(self, ec)
+  def decr(key: String, by: Int)(implicit ec: ExecutionContext):  Future[Int] = Couchbase.decr(key, by)(self, ec)
 
   /**
    *
@@ -431,7 +431,7 @@ trait BucketAPI {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Long)(implicit ec: ExecutionContext):  Future[OpResult] = Couchbase.decr(key, by)(self, ec)
+  def decr(key: String, by: Long)(implicit ec: ExecutionContext):  Future[Long] = Couchbase.decr(key, by)(self, ec)
 
   /**
    *
