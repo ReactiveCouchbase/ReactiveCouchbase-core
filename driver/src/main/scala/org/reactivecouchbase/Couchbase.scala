@@ -49,6 +49,22 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     if (cbDriver.configuration.getBoolean("couchbase.driver.useec").getOrElse(true)) {
       cfb.setListenerExecutorService(ExecutionContextExecutorServiceBridge.apply(cbDriver.executor()))
     }
+    cbDriver.configuration.getLong("couchbase.driver.native.authWaitTime").foreach(cfb.setAuthWaitTime)
+    cbDriver.configuration.getLong("couchbase.driver.native.obsPollInterval").foreach(cfb.setObsPollInterval)
+    cbDriver.configuration.getLong("couchbase.driver.native.obsTimeout").foreach(cfb.setObsTimeout)
+    cbDriver.configuration.getLong("couchbase.driver.native.reconnectThresholdTime").foreach(cfb.setReconnectThresholdTime(_, TimeUnit.MILLISECONDS))
+    cbDriver.configuration.getInt("couchbase.driver.native.viewConnsPerNode").foreach(cfb.setViewConnsPerNode)
+    cbDriver.configuration.getInt("couchbase.driver.native.viewTimeout").foreach(cfb.setViewTimeout)
+    cbDriver.configuration.getInt("couchbase.driver.native.viewWorkerSize").foreach(cfb.setViewWorkerSize)
+    cbDriver.configuration.getBoolean("couchbase.driver.native.useNagleAlgorithm").foreach(cfb.setUseNagleAlgorithm)
+    cbDriver.configuration.getBoolean("couchbase.driver.native.daemon").foreach(cfb.setDaemon)
+    cbDriver.configuration.getInt("couchbase.driver.native.timeoutExceptionThreshold").foreach(cfb.setTimeoutExceptionThreshold)
+    cbDriver.configuration.getBoolean("couchbase.driver.native.shouldOptimize").foreach(cfb.setShouldOptimize)
+    cbDriver.configuration.getLong("couchbase.driver.native.maxReconnectDelay").foreach(cfb.setMaxReconnectDelay)
+    cbDriver.configuration.getLong("couchbase.driver.native.opQueueMaxBlockTime").foreach(cfb.setOpQueueMaxBlockTime)
+    cbDriver.configuration.getLong("couchbase.driver.native.opTimeout").foreach(cfb.setOpTimeout)
+    cbDriver.configuration.getLong("couchbase.driver.native.maxReconnectDelay").foreach(cfb.setMaxReconnectDelay)
+    cbDriver.configuration.getInt("couchbase.driver.native.readBufferSize").foreach(cfb.setReadBufferSize)
     val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass)
     val client = new CouchbaseClient(cf)
     if (jsonStrictValidation) {
