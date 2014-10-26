@@ -1,6 +1,7 @@
 package org.reactivecouchbase.client
 
 import org.reactivecouchbase.CouchbaseBucket
+import play.api.libs.json.Json
 import scala.concurrent.{Future, ExecutionContext}
 import org.reactivecouchbase.client.CouchbaseFutures._
 
@@ -41,8 +42,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by: java.lang.Integer), bucket, ec ).map(OpResult(_, 1))
+  def incr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[Int] = {
+    waitForOperation( bucket.couchbaseClient.asyncIncr(key, by: java.lang.Integer), bucket, ec ).map(_.toInt)
   }
 
   /**
@@ -55,8 +56,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def incr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncIncr(key, by: java.lang.Long), bucket, ec ).map(OpResult(_, 1))
+  def incr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[Long] = {
+    waitForOperation( bucket.couchbaseClient.asyncIncr(key, by: java.lang.Long), bucket, ec ).map(_.toLong)
   }
 
   /**
@@ -69,8 +70,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by: java.lang.Integer), bucket, ec ).map(OpResult(_, 1))
+  def decr(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[Int] = {
+    waitForOperation( bucket.couchbaseClient.asyncDecr(key, by: java.lang.Integer), bucket, ec ).map(_.toInt)
   }
 
   /**
@@ -83,8 +84,8 @@ trait Counters {
    * @param ec ExecutionContext for async processing
    * @return
    */
-  def decr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
-    waitForOperationStatus( bucket.couchbaseClient.asyncDecr(key, by: java.lang.Long), bucket, ec ).map(OpResult(_, 1))
+  def decr(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext):  Future[Long] = {
+    waitForOperation( bucket.couchbaseClient.asyncDecr(key, by: java.lang.Long), bucket, ec ).map(_.toLong)
   }
 
   /**
@@ -98,7 +99,7 @@ trait Counters {
    * @return
    */
   def incrAndGet(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Int] = {
-    incr(key, by)(bucket, ec).flatMap(_ => getInt(key)(bucket, ec))
+    incr(key, by)(bucket, ec).map(_.toInt)
   }
 
   /**
@@ -112,7 +113,7 @@ trait Counters {
    * @return
    */
   def incrAndGet(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Long] = {
-    incr(key, by)(bucket, ec).flatMap(_ => getLong(key)(bucket, ec))
+    incr(key, by)(bucket, ec)
   }
 
   /**
@@ -126,7 +127,7 @@ trait Counters {
    * @return
    */
   def decrAndGet(key: String, by: Int)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Int] = {
-    decr(key, by)(bucket, ec).flatMap(_ => getInt(key)(bucket, ec))
+    decr(key, by)(bucket, ec).map(_.toInt)
   }
 
   /**
@@ -140,6 +141,6 @@ trait Counters {
    * @return
    */
   def decrAndGet(key: String, by: Long)(implicit bucket: CouchbaseBucket, ec: ExecutionContext): Future[Long] = {
-    decr(key, by)(bucket, ec).flatMap(_ => getLong(key)(bucket, ec))
+    decr(key, by)(bucket, ec)
   }
 }
