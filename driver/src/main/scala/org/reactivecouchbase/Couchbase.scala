@@ -111,7 +111,7 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
   /**
    * Timeout
    */
-  private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.actorctx.timeout").getOrElse(60000L)
+  private[reactivecouchbase] val ecTimeout: Long = cbDriver.configuration.getLong("couchbase.akka.timeout").getOrElse(60000L)
 
   /**
    * Use experimental Query API instead of Java Drivers one
@@ -291,7 +291,7 @@ object ReactiveCouchbaseDriver {
   private def defaultSystem = {
     import com.typesafe.config.ConfigFactory
     val config = ConfigFactory.load()
-    ActorSystem("ReactiveCouchbaseSystem", config.getConfig("couchbase.actorctx"))
+    ActorSystem("ReactiveCouchbaseSystem", config.getConfig("couchbase.akka"))
   }
 
   /**

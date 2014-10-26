@@ -46,7 +46,7 @@ version := "1.0-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   cache,
-  "org.reactivecouchbase" %% "reactivecouchbase-play" % "0.1-SNAPSHOT"
+  "org.reactivecouchbase" %% "reactivecouchbase-play" % "0.4-SNAPSHOT"
 )
 
 resolvers += "ReactiveCouchbase repository" at "https://raw.github.com/ReactiveCouchbase/repository/master/snapshots"
@@ -70,7 +70,7 @@ object ApplicationBuild extends Build {
 
   val appDependencies = Seq(
     cache,
-    "org.reactivecouchbase" %% "reactivecouchbase-play" % "0.1-SNAPSHOT"
+    "org.reactivecouchbase" %% "reactivecouchbase-play" % "0.4-SNAPSHOT"
   )
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
@@ -88,7 +88,7 @@ add in your `conf/application.conf` file :
 ```
 
 couchbase {
-  actorctx {
+  akka {
     timeout=1000
     execution-context {
       fork-join-executor {
@@ -358,7 +358,7 @@ Here is the complete plugin configuration with default values
 ```
 
 couchbase {
-  actorctx {               # execution context configuration, optional
+  akka {               # execution context configuration, optional
     timeout=1000                    # default timeout for futures (ms), optional
     execution-context {             # actual execution context configuration if needed, optional
       fork-join-executor {
