@@ -54,7 +54,8 @@ object ApplicationBuild extends Build {
       libraryDependencies += "org.specs2" %% "specs2" % "2.3.12" % "test" cross CrossVersion.binary,
       organization := "org.reactivecouchbase",
       version := appVersion,
-      publishTo <<= local,
+      publishTo := Some("Artifactory Realm" at "http://artifactory.ops.am1.qa.ext.bamgrid.com/artifactory/recon-dependencies"),
+      credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
       publishMavenStyle := true,
       publishArtifact in Test := false,
       pomIncludeRepository := { _ => false },
@@ -68,8 +69,8 @@ object ApplicationBuild extends Build {
             </license>
           </licenses>
           <scm>
-            <url>git@github.com:ReactiveCouchbase/ReactiveCouchbase-core.git</url>
-            <connection>scm:git:git@github.com:ReactiveCouchbase/ReactiveCouchbase-core.git</connection>
+            <url>git@github.com:zbintliff/ReactiveCouchbase-core.git</url>
+            <connection>scm:git:git@github.com:zbintliff/ReactiveCouchbase-core.git</connection>
           </scm>
           <developers>
             <developer>
