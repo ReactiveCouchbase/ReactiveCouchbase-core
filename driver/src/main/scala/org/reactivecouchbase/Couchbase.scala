@@ -3,6 +3,8 @@ package org.reactivecouchbase
 import com.couchbase.client.{ CouchbaseConnectionFactoryBuilder, CouchbaseClient }
 import java.net.URI
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
+import net.spy.memcached.metrics.{DefaultMetricCollector, MetricType}
+
 import collection.JavaConversions._
 import collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
@@ -65,6 +67,11 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     cbDriver.configuration.getLong("couchbase.driver.native.opTimeout").foreach(cfb.setOpTimeout)
     cbDriver.configuration.getLong("couchbase.driver.native.maxReconnectDelay").foreach(cfb.setMaxReconnectDelay)
     cbDriver.configuration.getInt("couchbase.driver.native.readBufferSize").foreach(cfb.setReadBufferSize)
+
+    if (cbDriver.configuration.getBoolean("couchbase.driver.native.setMetricCollector").getOrElse(false)) cfb.setMetricCollector(new DefaultMetricCollector())
+    val metricType = MetricType.values().find(prop => prop.toString.equalsIgnoreCase(cbDriver.configuration.getString("couchbase.driver.native.enableMetrics").get)).getOrElse(MetricType.OFF)
+    cfb.setEnableMetrics(metricType)
+
     val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass)
     val client = new CouchbaseClient(cf)
     if (jsonStrictValidation) {
@@ -154,6 +161,8 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     .setRequestTimeoutInMs(cbDriver.configuration.getInt("couchbase.http.reqtimeout").getOrElse(60000))
     .setIdleConnectionInPoolTimeoutInMs(cbDriver.configuration.getInt("couchbase.http.idlepool").getOrElse(60000))
     .setIdleConnectionTimeoutInMs(cbDriver.configuration.getInt("couchbase.http.idleconnection").getOrElse(60000))
+    .setMaximumConnectionsTotal(cbDriver.configuration.getInt("couchbase.http.maxTotalConnections").getOrElse(-1))
+    .setMaximumConnectionsPerHost(cbDriver.configuration.getInt("couchbase.http.maxConnectionsPerHost").getOrElse(-1))
     .build()
 
   /**
