@@ -69,8 +69,9 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     cbDriver.configuration.getInt("couchbase.driver.native.readBufferSize").foreach(cfb.setReadBufferSize)
 
     if (cbDriver.configuration.getBoolean("couchbase.driver.native.setMetricCollector").getOrElse(false)) cfb.setMetricCollector(new DefaultMetricCollector())
-    val metricType = MetricType.values().find(prop => prop.toString.equalsIgnoreCase(cbDriver.configuration.getString("couchbase.driver.native.enableMetrics").get)).getOrElse(MetricType.OFF)
-    cfb.setEnableMetrics(metricType)
+
+    val metricType = MetricType.values().find(prop => prop.toString.equalsIgnoreCase(cbDriver.configuration.getString("couchbase.driver.native.enableMetrics").getOrElse(MetricType.OFF.name())))
+    cfb.setEnableMetrics(metricType.get)
 
     val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass)
     val client = new CouchbaseClient(cf)
