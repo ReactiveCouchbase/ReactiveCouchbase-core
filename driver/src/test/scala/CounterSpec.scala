@@ -73,7 +73,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     "increment a non existing long key must fail" in {
       
     	Await.result( bucket.delete("incrementNoKey"), timeout )
-    	Await.result( bucket.incr("incrementNoKey", 1L), timeout ).isFailure must beTrue
+    	Await.result( bucket.incr("incrementNoKey", 1L), timeout ).mustNotEqual(beTrue)
     	success
       
     }
@@ -81,7 +81,7 @@ You need to start a Couchbase server with a 'default' bucket on standard port to
     "increment a non existing int key must fail" in {
       
     	Await.result( bucket.delete("incrementNoKey"), timeout )
-    	Await.result( bucket.incr("incrementNoKey", 1), timeout ).isFailure must beTrue
+    	Await.result( bucket.incr("incrementNoKey", 1), timeout ).mustNotEqual(beTrue)
     	success
       
     }
