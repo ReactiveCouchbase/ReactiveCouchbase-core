@@ -3,6 +3,8 @@ package org.reactivecouchbase
 import com.couchbase.client.{ CouchbaseConnectionFactoryBuilder, CouchbaseClient }
 import java.net.URI
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
+import net.spy.memcached.metrics.{AbstractMetricCollector, DefaultMetricCollector, MetricType}
+
 import collection.JavaConversions._
 import collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
@@ -65,8 +67,18 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     cbDriver.configuration.getLong("couchbase.driver.native.opTimeout").foreach(cfb.setOpTimeout)
     cbDriver.configuration.getLong("couchbase.driver.native.maxReconnectDelay").foreach(cfb.setMaxReconnectDelay)
     cbDriver.configuration.getInt("couchbase.driver.native.readBufferSize").foreach(cfb.setReadBufferSize)
-    val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass)
-    val client = new CouchbaseClient(cf)
+
+    // Sets the metric Collector, ths class must extent AbstractMetricCollector
+    cbDriver.configuration.getString("couchbase.driver.native.setMetricCollector").foreach( x => {
+      cfb.setMetricCollector(Class.forName(x).newInstance().asInstanceOf[AbstractMetricCollector]);
+    })
+
+    // SInce MetricType is an enum it iteratetes through possible values and sets the correct MetricType
+    MetricType.values().find(prop => prop.toString.equalsIgnoreCase(cbDriver.configuration.getString("couchbase.driver.native.enableMetrics").getOrElse(MetricType.OFF.name()))).foreach(cfb.setEnableMetrics)
+
+
+    val cf = cfb.buildCouchbaseConnection(uris, bucket, user,pass)
+    var client :CouchbaseClient = new CouchbaseClient(cf)
     if (jsonStrictValidation) {
       driver.logger.info("Failing on bad JSON structure enabled.")
     }
@@ -154,6 +166,8 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     .setRequestTimeoutInMs(cbDriver.configuration.getInt("couchbase.http.reqtimeout").getOrElse(60000))
     .setIdleConnectionInPoolTimeoutInMs(cbDriver.configuration.getInt("couchbase.http.idlepool").getOrElse(60000))
     .setIdleConnectionTimeoutInMs(cbDriver.configuration.getInt("couchbase.http.idleconnection").getOrElse(60000))
+    .setMaximumConnectionsTotal(cbDriver.configuration.getInt("couchbase.http.maxTotalConnections").getOrElse(-1))
+    .setMaximumConnectionsPerHost(cbDriver.configuration.getInt("couchbase.http.maxConnectionsPerHost").getOrElse(-1))
     .build()
 
   /**
