@@ -3,7 +3,7 @@ package org.reactivecouchbase
 import com.couchbase.client.{ CouchbaseConnectionFactoryBuilder, CouchbaseClient }
 import java.net.URI
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
-import net.spy.memcached.metrics.{DefaultMetricCollector, MetricType}
+import net.spy.memcached.metrics.{AbstractMetricCollector, DefaultMetricCollector, MetricType}
 
 import collection.JavaConversions._
 import collection.mutable.ArrayBuffer
@@ -68,13 +68,17 @@ class CouchbaseBucket( private[reactivecouchbase] val cbDriver: ReactiveCouchbas
     cbDriver.configuration.getLong("couchbase.driver.native.maxReconnectDelay").foreach(cfb.setMaxReconnectDelay)
     cbDriver.configuration.getInt("couchbase.driver.native.readBufferSize").foreach(cfb.setReadBufferSize)
 
-    if (cbDriver.configuration.getBoolean("couchbase.driver.native.setMetricCollector").getOrElse(false)) cfb.setMetricCollector(new DefaultMetricCollector())
+    // Sets the metric Collector, ths class must extent AbstractMetricCollector
+    cbDriver.configuration.getString("couchbase.driver.native.setMetricCollector").foreach( x => {
+      cfb.setMetricCollector(Class.forName(x).newInstance().asInstanceOf[AbstractMetricCollector]);
+    })
 
-    val metricType = MetricType.values().find(prop => prop.toString.equalsIgnoreCase(cbDriver.configuration.getString("couchbase.driver.native.enableMetrics").getOrElse(MetricType.OFF.name())))
-    cfb.setEnableMetrics(metricType.get)
+    // SInce MetricType is an enum it iteratetes through possible values and sets the correct MetricType
+    MetricType.values().find(prop => prop.toString.equalsIgnoreCase(cbDriver.configuration.getString("couchbase.driver.native.enableMetrics").getOrElse(MetricType.OFF.name()))).foreach(cfb.setEnableMetrics)
 
-    val cf = cfb.buildCouchbaseConnection(uris, bucket, user, pass)
-    val client = new CouchbaseClient(cf)
+
+    val cf = cfb.buildCouchbaseConnection(uris, bucket, user,pass)
+    var client :CouchbaseClient = new CouchbaseClient(cf)
     if (jsonStrictValidation) {
       driver.logger.info("Failing on bad JSON structure enabled.")
     }

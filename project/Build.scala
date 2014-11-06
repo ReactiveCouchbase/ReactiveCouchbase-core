@@ -44,6 +44,7 @@ object ApplicationBuild extends Build {
     .settings(baseSettings: _*)
     .settings(
       resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+      resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
       libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.4.4",
       libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.6" cross CrossVersion.binary,
       libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.3.5" cross CrossVersion.binary,
@@ -52,6 +53,7 @@ object ApplicationBuild extends Build {
       libraryDependencies += "com.ning" % "async-http-client" % "1.8.14",
       libraryDependencies += "com.typesafe" % "config" % "1.2.1",
       libraryDependencies += "org.specs2" %% "specs2" % "2.3.12" % "test" cross CrossVersion.binary,
+      libraryDependencies += "com.codahale.metrics" % "metrics-core" % "3.0.1",
       organization := "org.reactivecouchbase",
       version := appVersion,
       publishTo := Some("Artifactory Realm" at "http://artifactory.ops.am1.qa.ext.bamgrid.com/artifactory/recon-dependencies"),
