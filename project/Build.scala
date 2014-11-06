@@ -56,8 +56,7 @@ object ApplicationBuild extends Build {
       libraryDependencies += "com.codahale.metrics" % "metrics-core" % "3.0.1",
       organization := "org.reactivecouchbase",
       version := appVersion,
-      publishTo := Some("Artifactory Realm" at "http://artifactory.ops.am1.qa.ext.bamgrid.com/artifactory/recon-dependencies"),
-      credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+      publishTo <<= local,
       publishMavenStyle := true,
       publishArtifact in Test := false,
       pomIncludeRepository := { _ => false },
@@ -71,8 +70,8 @@ object ApplicationBuild extends Build {
             </license>
           </licenses>
           <scm>
-            <url>git@github.com:zbintliff/ReactiveCouchbase-core.git</url>
-            <connection>scm:git:git@github.com:zbintliff/ReactiveCouchbase-core.git</connection>
+            <url>git@github.com:ReactiveCouchbase/ReactiveCouchbase-core.git</url>
+            <connection>scm:git:git@github.com:ReactiveCouchbase/ReactiveCouchbase-core.git</connection>
           </scm>
           <developers>
             <developer>
