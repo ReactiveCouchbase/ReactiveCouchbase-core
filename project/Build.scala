@@ -44,7 +44,7 @@ object ApplicationBuild extends Build {
     .settings(baseSettings: _*)
     .settings(
       resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
-      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.4.5",
+      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.4.6",
       libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.6" cross CrossVersion.binary,
       libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.3.5" cross CrossVersion.binary,
       libraryDependencies += "com.typesafe.play" %% "play-json" % "2.3.5" cross CrossVersion.binary,
