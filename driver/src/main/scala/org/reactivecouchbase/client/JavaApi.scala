@@ -58,6 +58,7 @@ trait JavaApi { self: Queries =>
    * @param key the key of the doc
    * @param exp expiration of the doc
    * @param value the document
+   * @param tc the transcoder
    * @param bucket the bucket to use
    * @param ec ExecutionContext for async processing
    * @return the operation status
