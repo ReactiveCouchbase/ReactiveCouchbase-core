@@ -4,7 +4,7 @@ import net.spy.memcached.internal._
 import net.spy.memcached.CASValue
 import scala.concurrent.{ Promise, Future, ExecutionContext }
 import com.couchbase.client.internal.{ HttpCompletionListener, HttpFuture }
-import net.spy.memcached.ops.OperationStatus
+import net.spy.memcached.ops.{StatusCode, OperationStatus}
 import play.api.libs.json.Reads
 import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.duration.FiniteDuration
@@ -196,9 +196,9 @@ private[reactivecouchbase] object CouchbaseFutures {
       val f = future
       if (!f.getStatus.isSuccess) {
         b.driver.logger.error(f.getStatus.getMessage + " for key " + f.getKey)
-        f.getStatus.getMessage match {
-          case "NOT_FOUND" => promise.tryFailure(new OperationStatusErrorNotFound(f.getStatus))
-          case "LOCK_ERROR" => promise.tryFailure(new OperationStatusErrorIsLocked(f.getStatus))
+        (f.getStatus.getStatusCode, f.getStatus.getMessage) match {
+          case (StatusCode.ERR_NOT_FOUND, _) | (_, "NOT_FOUND") => promise.tryFailure(new OperationStatusErrorNotFound(f.getStatus))
+          case (_, "LOCK_ERROR") => promise.tryFailure(new OperationStatusErrorIsLocked(f.getStatus))
           case _ => promise.tryFailure(new OperationStatusError(f.getStatus))
         }
       } else if (f.isDone || f.isCancelled) {
