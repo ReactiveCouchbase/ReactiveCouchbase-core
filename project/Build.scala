@@ -4,8 +4,8 @@ import Keys._
 object ApplicationBuild extends Build {
 
   val appName         = "ReactiveCouchbase-core"
-  val appVersion      = "0.4-SNAPSHOT"
-  val appScalaVersion = "2.11.1"
+  val appVersion      = "0.5-SNAPSHOT"
+  val appScalaVersion = "2.11.7"
   //val appScalaBinaryVersion = "2.10"
   val appScalaCrossVersions = Seq("2.11.1", "2.10.4")
 
@@ -44,15 +44,15 @@ object ApplicationBuild extends Build {
     .settings(baseSettings: _*)
     .settings(
       resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
-      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.4.5",
+      libraryDependencies += "com.couchbase.client" % "couchbase-client" % "1.4.11",
       libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.6" cross CrossVersion.binary,
-      libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.3.5" cross CrossVersion.binary,
-      libraryDependencies += "com.typesafe.play" %% "play-json" % "2.3.5" cross CrossVersion.binary,
+      libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.3.10" cross CrossVersion.binary,
+      libraryDependencies += "com.typesafe.play" %% "play-json" % "2.3.10" cross CrossVersion.binary,
       libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.1",
       libraryDependencies += "com.ning" % "async-http-client" % "1.8.14",
       libraryDependencies += "com.typesafe" % "config" % "1.2.1",
       libraryDependencies += "org.specs2" %% "specs2" % "2.3.12" % "test" cross CrossVersion.binary,
-      libraryDependencies += "com.codahale.metrics" % "metrics-core" % "3.0.1",
+      //libraryDependencies += "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
       organization := "org.reactivecouchbase",
       version := appVersion,
       publishTo <<= local,
