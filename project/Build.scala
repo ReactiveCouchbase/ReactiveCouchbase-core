@@ -52,7 +52,7 @@ object ApplicationBuild extends Build {
       libraryDependencies += "com.ning" % "async-http-client" % "1.8.14",
       libraryDependencies += "com.typesafe" % "config" % "1.2.1",
       libraryDependencies += "org.specs2" %% "specs2" % "2.3.12" % "test" cross CrossVersion.binary,
-      //libraryDependencies += "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
+      libraryDependencies += "com.codahale.metrics" % "metrics-core" % "3.0.1",
       organization := "org.reactivecouchbase",
       version := appVersion,
       publishTo <<= local,
