@@ -174,13 +174,13 @@ trait Queries {
     } else {
       QueryEnumerator(() => waitForHttp[ViewResponse]( bucket.couchbaseClient.asyncQuery(view, query), bucket, ec ).map { results =>
         Enumerator.enumerate(results.iterator()) &> Enumeratee.map[ViewRow] {
-          case r: ViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
-          case r: ViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
-          case r: ViewRowNoDocs => RawRow(None, Some(r.getId), r.getKey, r.getValue)
+          case r: ViewRowWithDocs if query.willIncludeDocs() => RawRow(Option(r.getDocument.asInstanceOf[String]), Option(r.getId), r.getKey, r.getValue)
+          case r: ViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Option(r.getId), r.getKey, r.getValue)
+          case r: ViewRowNoDocs => RawRow(None, Option(r.getId), r.getKey, r.getValue)
           case r: ViewRowReduced => RawRow(None, None, r.getKey, r.getValue)
-          case r: SpatialViewRowNoDocs => RawRow(None, Some(r.getId), r.getKey, r.getValue)
-          case r: SpatialViewRowWithDocs if query.willIncludeDocs() => RawRow(Some(r.getDocument.asInstanceOf[String]), Some(r.getId), r.getKey, r.getValue)
-          case r: SpatialViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Some(r.getId), r.getKey, r.getValue)
+          case r: SpatialViewRowNoDocs => RawRow(None, Option(r.getId), r.getKey, r.getValue)
+          case r: SpatialViewRowWithDocs if query.willIncludeDocs() => RawRow(Option(r.getDocument.asInstanceOf[String]), Option(r.getId), r.getKey, r.getValue)
+          case r: SpatialViewRowWithDocs if !query.willIncludeDocs() => RawRow(None, Option(r.getId), r.getKey, r.getValue)
         }
       })
     }
