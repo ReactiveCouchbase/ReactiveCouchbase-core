@@ -1,5 +1,6 @@
 package org.reactivecouchbase.client
 
+import net.spy.memcached.transcoders.Transcoder
 import net.spy.memcached.{ReplicateTo, PersistTo}
 import org.reactivecouchbase.CouchbaseBucket
 import scala.concurrent.{Future, ExecutionContext}
@@ -57,6 +58,22 @@ trait JavaApi { self: Queries =>
    * @param key the key of the doc
    * @param exp expiration of the doc
    * @param value the document
+   * @param tc the transcoder
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @return the operation status
+   */
+  def javaSet[T](key: String, exp: Int, value: T, tc: Transcoder[T], bucket: CouchbaseBucket, ec: ExecutionContext):  Future[OpResult] = {
+    waitForOperationStatus( bucket.couchbaseClient.set(key, exp, value, tc), bucket, ec ).map(OpResult(_, 1))(ec)
+  }
+
+  /**
+   *
+   * Set a document
+   *
+   * @param key the key of the doc
+   * @param exp expiration of the doc
+   * @param value the document
    * @param persistTo persistance flag
    * @param replicateTo replication flag
    * @param bucket the bucket to use
@@ -100,6 +117,24 @@ trait JavaApi { self: Queries =>
       case value: String => Future.successful(play.libs.Json.fromJson(play.libs.Json.parse(value), clazz))
       case null => Future.failed(new IllegalStateException(s"Nothing found for key : $key"))
       case _ => Future.failed(new IllegalStateException(s"Document $key is not a string"))
+    }(ec)
+  }
+
+  /**
+   * Fetch a document
+   * Applies the transcoder of the row document.
+   * @param key the key of the doc
+   * @param tc the transcoder
+   * @param bucket the bucket to use
+   * @param ec ExecutionContext for async processing
+   * @tparam T type of the doc
+   * @return the document
+   * @return
+   */
+  def javaGet[T](key: String, tc: Transcoder[T], bucket: CouchbaseBucket, ec: ExecutionContext): Future[T] = {
+    waitForGet( bucket.couchbaseClient.asyncGet(key, tc), bucket, ec ).flatMap {
+      case value: T => Future.successful(value)
+      case _ => Future.failed(new IllegalStateException(s"Document $key does not exist or could not parsed by ${tc.getClass}"))
     }(ec)
   }
 
