@@ -223,7 +223,9 @@ trait Queries {
       enumerator &>
         Enumeratee.map[RawRow] { row =>
           row.document.map { doc =>
-            JsRow[T](r.reads(Json.parse(doc)), row.id, row.key, row.value)
+            if (doc != null)
+              JsRow[T](r.reads(Json.parse(doc)), row.id, row.key, row.value)
+            else null
           }.getOrElse(
             JsRow[T](JsError(), row.id, row.key, row.value)
           )
